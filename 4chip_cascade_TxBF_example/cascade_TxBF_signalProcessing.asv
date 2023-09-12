@@ -41,10 +41,10 @@ addpath(genpath('.\cascade_json_parser\'))
 %load the adc data params
 %BF_data_dest0 = 'E:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\TXBF_BeamAngle31\';
 %% todo
-BF_data_dest0 = 'D:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\TxBF_USRR_BeamAngle_beamsteering[-30,5,30]\';
+BF_data_dest0 = 'D:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\TxBF_USRR_BeamAngle_beamsteering[-45,5,45]_2\';
 
 %% define what angles to steer in TX beamforming mode
-paramsConfig.anglesToSteer=[-30:5:30]; 
+paramsConfig.anglesToSteer=[-45:5:45]; 
 
 % Only Frame based supported in the Post-processing script
 paramsConfig.Chirp_Frame_BF = 0; % 1 - chirp based beam steering, 0 - frame based beam steering
@@ -92,12 +92,12 @@ for i_file = 1:(length(fileIdx_unique))
     % Get Valid Number of Frames 
     [numValidFrames, dataFileSize] = getValidNumFrames(fullfile(BF_data_dest0, fileNameStruct.masterIdxFile));
     
-    % beam 处理数据需要的变量
-    gBeams_Phase = []; %zeros(length(paramsConfig.anglesToSteer),1)
-    gDownsample_value = 2;
-    
-    doppler_fs = 1e6 / (paramsConfig.SF1SubFramePeriodicity / 200) * paramsConfig.SF1NumLoops; 
-
+    %
+    if 1
+        gBeams_Phase = [] %zeros(length(paramsConfig.anglesToSteer),1)
+        gDownsample_value = 2
+        doppler_fs = 1667; %/ gDownsample_value
+    end
 
     for frameId = 2:numValidFrames
         paramsConfig.frameId = frameId;
@@ -112,8 +112,7 @@ for i_file = 1:(length(fileIdx_unique))
             startRangeInd = 5;
             lastRangeIndToThrow = 20;
             
-            [ range_angle_stich]= Plot_advFraConfig_TXBF_rangeAzimuth_stich( ...
-                                        radar_data_TXBF,...
+            [ range_angle_stich]= Plot_advFraConfig_TXBF_rangeAzimuth_stich(radar_data_TXBF,...
                                         Rx_Ant_Arr, ...
                                         paramsConfig, ...
                                         anglesToSteer, ...
@@ -130,60 +129,61 @@ for i_file = 1:(length(fileIdx_unique))
         DopplerFFT = fft(rangeFFT, paramsConfig.nchirp_loops, 2);            
 
         % estimate the range bin, plot all beam angle range fft         
-        if frameId < 2
+        if frameId < 0
             figure(12);
             for i = 1:length(paramsConfig.anglesToSteer)
                 plot(abs(rangeFFT(:, 1, 1, i)), LineWidth=1);
                 hold on;
-            end
-            title("Range FFT")
+            end        
             pause(0.05);
         end 
 
         % 获取 不同 beam 的信号数据
-        Rangebin = 9;  % 人所在的位置
-        for i = 1:length(paramsConfig.anglesToSteer)
-            beam_phase = rangeFFT(Rangebin, :, 1, i);
-            gBeams_Phase = [gBeams_Phase, beam_phase];
-        end                
+        if 1
+            Rangebin = 15;  % 人所在的位置
+            for i = 1:length(paramsConfig.anglesToSteer)
+                beam_phase = rangeFFT(Rangebin, :, 1, i);
+                gBeams_Phase = [gBeams_Phase, beam_phase];
+            end
+
+        end
+                
     end
     cnt = cnt + 1;  % 用于记录不同的次数
     
     %%
-    % 所有 beam 的 数据
-    gBeams_All_Span = gBeams_Phase
+ 
+    if 1
+        gBeams_Phase = reshape(gBeams_Phase, ...
+                           length(paramsConfig.anglesToSteer), ...
+                           int32(length(gBeams_Phase)/length(paramsConfig.anglesToSteer)))
 
-    gBeams_Phase = reshape(gBeams_Phase, ...
-                       length(paramsConfig.anglesToSteer), ...
-                       int32(length(gBeams_Phase)/length(paramsConfig.anglesToSteer)));
-
-    
-    % 1. 相位变化一个复数， a+j.b  angle-> (b/a) ==> unwrap() == > diff 
-    % 可视化数据，将每个 beam 的数据可视化
-    figure(100);
-    for i = 1:length(paramsConfig.anglesToSteer)
-        gBeams_motion(i,:) = diff(unwrap(angle(gBeams_Phase(i,:))));
-
-        x = ((i-1)*length(gBeams_motion(i,:))+1:i*length(gBeams_motion(i,:)));
-        plot(x, gBeams_motion(i,:));
-        hold on;
+        % 1. gSig 是一个复数， a+j.b  angle-> (b/a) ==> unwrap() == > diff 
+        gBeams_motion = diff(unwrap(angle(gBeams_Phase)));
+        %gSig_downsample = downsample(gSig1, gDownsample_value);
+        
+        figure(98);
+        plot(gBeams_motion);
         pause(0.01);
-    end
-    
-    % 低通滤波？
-    % 2. filter 带通滤波 呼吸：0.3 - 0.8； 心跳频率 0.8 - 2Hz
-    h = ellip_band_filter;
-    figure(101);
-    for i = 1:length(paramsConfig.anglesToSteer)
-        gBeams_motion_filter(i,:) = filter(h, gBeams_motion(i,:));
-        x = ((i-1)*length(gBeams_motion(i,:))+1:i*length(gBeams_motion(i,:)));
-        plot(x, gBeams_motion_filter(i,:));
-        hold on;
-        pause(0.01);
-    end
-    
-    % 峰值检测
-    % pks = findpeaks(gBeams_motion_filter(0,:), MinPeakDistance=doppler_fs/2);
 
+        % 2. filter 带通滤波 呼吸：0.3 - 0.8； 心跳频率 0.8 - 2Hz
+        h = ellip_band_filter;
+
+        gSig1 = filter(h, gSig1);
+
+        % plot
+        figure(100);
+        plot(gSig1);
+        pause(0.01);
+
+        pks = findpeaks(gSig1, MinPeakDistance=doppler_fs/2);
+        pks  = pks(pks>0.);
+        figure(101)
+        plot(pks);
+        mean(pks);
+        hr = length(pks);
+      
+
+    end
 end
 %%

@@ -50,15 +50,15 @@ cmdStr = sprintf('paramsConfig = %s();',paramFile);
 eval(cmdStr);
 
 % Initialize Radarstudio .NET connection
-RSTD_DLL_Path = 'D:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\Clients\RtttNetClientController\RtttNetClientAPI.dll';
-ErrStatus = Init_RSTD_Connection(RSTD_DLL_Path);
-if (ErrStatus ~= 30000)
-    disp('Error inside Init_RSTD_Connection');
-    return;
-end
+% RSTD_DLL_Path = 'E:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\Clients\RtttNetClientController\RtttNetClientAPI.dll';
+% ErrStatus = Init_RSTD_Connection(RSTD_DLL_Path);
+% if (ErrStatus ~= 30000)
+%     disp('Error inside Init_RSTD_Connection');
+%     return;
+% end
 
 %loads phase shifter calibrations. Measured zero angle data in DEGREES,
-load(phaseShiftCalibfile);
+load(phaseShiftCalibfile);  % Ph 变量 mat
 PS_actual = (squeeze((Ph(:,1,:))))';
 PS_actual(PS_actual > 0)  =  PS_actual(PS_actual>0) - 360;
 

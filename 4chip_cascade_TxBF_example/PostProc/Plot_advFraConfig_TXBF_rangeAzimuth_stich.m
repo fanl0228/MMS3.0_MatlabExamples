@@ -60,7 +60,8 @@ Sampling_Rate_ksps = params.Sampling_Rate_ksps;
 Slope_MHzperus = params.Slope_MHzperus;
 num_sweep=length(SweepAngles);
 DopplerFFTSize = 2^ceil(log2(size(BF_data,2)));
-rangeResolution = 3e8/2/(Samples_per_Chirp/Sampling_Rate_ksps*Slope_MHzperus*1e9);
+rangeResolution = 3e8/2/(Samples_per_Chirp/Sampling_Rate_ksps*Slope_MHzperus*1e9)
+
 indices_1D = (startRangeInd: params.Samples_per_Chirp-lastRangeIndToThrow) ;
 resolution = 3e8/2/(params.Samples_per_Chirp/params.Sampling_Rate_ksps*1e3*Slope_MHzperus*1e6);
 
@@ -72,7 +73,7 @@ window_2D = window_2D';
 
 for Rxnum=1:length(Rx_Ant_Arr)
     for sweep=1:num_sweep
-        radar_data_frame = squeeze(BF_data(:,:,Rxnum,sweep));        
+        radar_data_frame = squeeze(BF_data(:,:,Rxnum, sweep));        
        
         rangeFFT1(:,:,Rxnum,sweep) = fft(radar_data_frame.*window_1D,rangeFFTSize,1);
         rangeDopFFT1(:,:,Rxnum,sweep) = fftshift(fft(rangeFFT1(:,:,Rxnum,sweep).*window_2D,DopplerFFTSize,2),2);
@@ -100,6 +101,7 @@ range_scale = (0:size(rangeDopFFT1_ave,1)-1)* rangeResolution;
 
 subplot(2,2,1);
 plot(range_scale,20*log10(rangeDopFFT1_ave));grid on
+%plot(rangeDopFFT1_ave);grid on
 title('range profile averaged across all angles')
 xlabel('meters')
 ylabel('dB')
@@ -125,7 +127,8 @@ if length(SweepAngles) > 1
     xlabel('meters')
     ylabel('meters')
     title('stich range/azimuth')
-    
+
+    % 3D plot
     subplot(2,2,4);surf(y_axis, x_axis, abs(range_angle_stich).^0.2,'EdgeColor','none');
     %xlim([-5 5])
     %ylim([0 10]);

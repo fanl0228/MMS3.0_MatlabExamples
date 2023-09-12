@@ -45,6 +45,7 @@
 %      lastRangeIndToThrow: number of last range bins to be excluded in the plot
 %      DCRemoval: DC removal flag
 
+
 function Plot_advFraConfig_TXBF_2DFFT(BF_data,Rx_Ant_Arr,params,SweepAngles,BF_MIMO_ref, startRangeInd, lastRangeIndToThrow, DCRemoval)
 
 D_RX = params.D_RX;

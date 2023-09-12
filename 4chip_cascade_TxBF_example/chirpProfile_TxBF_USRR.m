@@ -54,25 +54,32 @@ params.Rx_Elements_To_Capture = 1:16;  %All Rx
 
 
 %% define what angles to steer in TX beamforming mode
-params.anglesToSteer=[-30:2:30];   % angles to steer in TX beamforming mode, in unit of degrees
+params.anglesToSteer=[-30:5:30];   % angles to steer in TX beamforming mode, in unit of degrees
+
+
+% params.anglesToSteer=[45];   % angles to steer in TX beamforming mode, in unit of degrees
+
+
 params.NumAnglesToSweep = length(params.anglesToSteer);
 
 %% chirp/profile parameters
 
 params.Start_Freq_GHz			=	77;								% starting fequency for chirp, make sure the entire BW is within 76~77 or 77~81
-params.Slope_MHzperus			=   79;                              % MHz/us
+params.Slope_MHzperus			=   100;                              % MHz/us 79;
 params.Idle_Time_us             =	130;                              % us
 params.Tx_Start_Time_us         =   0;                              % us
 params.Adc_Start_Time_us		=	6;                              % us
 params.Ramp_End_Time_us		    =	40;                             % us
 params.Sampling_Rate_ksps		=	8000;							% ksps
-params.Samples_per_Chirp		=	32;    			    			% Number of samples per chirp
+params.Samples_per_Chirp		=	32;    						    % Number of samples per chirp
 params.Rx_Gain_dB				=	40;								% dB
+
 % Frame config
 nchirp_loops                    =   128;
 Num_Frames                      =   1000;
-params.nchirp_loops			    =	nchirp_loops;							% Number of chirps per frame
-params.Num_Frames				=	Num_Frames;								% number of frames to collect data
+
+params.nchirp_loops			    =	nchirp_loops;					% Number of chirps per frame
+params.Num_Frames				=	Num_Frames;						% number of frames to collect data
 params.Dutycycle                =   0.5;                            % (ON duration)/(ON+OFF duration)
 params.Chirp_Duration_us        =   (params.Ramp_End_Time_us+params.Idle_Time_us); % us
 params.NumberOfSamplesPerChannel = params.Samples_per_Chirp * nchirp_loops * params.NumAnglesToSweep *params.Num_Frames; %number of ADC samples received per channel. this value is used in HSDC for data capture
@@ -85,27 +92,31 @@ params.d_BF = d;
 
 
 %advanced frame config
-params.Chirp_Frame_BF = 0; % 1 - chirp based beam steering, 0 - frame based beam steering
+params.Chirp_Frame_BF = 0; %  0 - frame based beam steering, 1 - chirp based beam steering
 params.numSubFrames = 1;
 %paramters for subframe 1
 if params.Chirp_Frame_BF == 0 % frame based
     params.SF1ChirpStartIdx = 0; %SF1 Start index of the first chirp in this sub frame
     params.SF1NumChirps = 1; % SF1 Number Of unique Chirps per burst
     params.SF1NumLoops = nchirp_loops;% SF1 Number Of times to loop through the unique chirps in each burst
-    %multiply 200 to convert the value to be programed to the register %example:2000000=10ms
+    
+    %multiply 200 to convert the value to be programed to the register % example:2000000=10ms
     params.SF1BurstPeriodicity = (params.Ramp_End_Time_us +params.Idle_Time_us)...
-        *nchirp_loops /params.Dutycycle*200;              %example:2000000=10ms
+                                *nchirp_loops /params.Dutycycle*200;              %example: 2000000=10ms
+    % actual SF1BurstPeriodicity is ( params.SF1BurstPeriodicity / 200 ) us
+    
     params.SF1ChirpStartIdxOffset = 1; % SF1 Chirps Start Idex Offset
     params.SF1NumBurst = params.NumAnglesToSweep; % SF1 Number Of Bursts constituting this sub frame
     params.SF1NumBurstLoops = 1; % SF1 Number Of Burst Loops
     params.SF1SubFramePeriodicity = params.SF1BurstPeriodicity*params.NumAnglesToSweep;%SF1 SubFrame Periodicity
+
 elseif params.Chirp_Frame_BF == 1 % chirp based
     params.SF1ChirpStartIdx = 0;
     params.SF1NumChirps = params.NumAnglesToSweep;
     params.SF1NumLoops = nchirp_loops;
     %multiply 200 to convert the value to be programed to the register  %example:2000000=10ms
-    params.SF1BurstPeriodicity = (params.Ramp_End_Time_us +params.Idle_Time_us)...
-        *nchirp_loops /params.Dutycycle*200 * params.NumAnglesToSweep ;
+    params.SF1BurstPeriodicity = (params.Ramp_End_Time_us +params.Idle_Time_us) ...
+                                  *nchirp_loops /params.Dutycycle*200 * params.NumAnglesToSweep ;
     params.SF1ChirpStartIdxOffset = 1;
     params.SF1NumBurst = 1;
     params.SF1NumBurstLoops = 1;
@@ -124,8 +135,8 @@ params.rangeFFTSize = 2^ceil(log2(params.Samples_per_Chirp));
 %% derived parameters
 chirpRampTime       = params.Samples_per_Chirp/(params.Sampling_Rate_ksps/1e3);
 chirpBandwidth      = params.Slope_MHzperus(1) * chirpRampTime; % Hz
-rangeResolution     = speedOfLight/2/(chirpBandwidth*1e6);
-params.rangeBinSize        = rangeResolution*params.Samples_per_Chirp/params.rangeFFTSize;
+rangeResolution     = speedOfLight/2/(chirpBandwidth*1e6)
+params.rangeBinSize        = rangeResolution*params.Samples_per_Chirp/params.rangeFFTSize
 
 end
 
