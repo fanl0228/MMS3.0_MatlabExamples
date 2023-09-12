@@ -54,7 +54,7 @@ params.Rx_Elements_To_Capture = 1:16;  %All Rx
 
 
 %% define what angles to steer in TX beamforming mode
-params.anglesToSteer=[-30:5:30];   % angles to steer in TX beamforming mode, in unit of degrees
+params.anglesToSteer=[1];   % angles to steer in TX beamforming mode, in unit of degrees
 
 
 % params.anglesToSteer=[45];   % angles to steer in TX beamforming mode, in unit of degrees
@@ -65,22 +65,22 @@ params.NumAnglesToSweep = length(params.anglesToSteer);
 %% chirp/profile parameters
 
 params.Start_Freq_GHz			=	77;								% starting fequency for chirp, make sure the entire BW is within 76~77 or 77~81
-params.Slope_MHzperus			=   100;                              % MHz/us 79;
-params.Idle_Time_us             =	130;                              % us
+params.Slope_MHzperus			=   60;                              % MHz/us 79;
+params.Idle_Time_us             =	20;                              % us
 params.Tx_Start_Time_us         =   0;                              % us
 params.Adc_Start_Time_us		=	6;                              % us
 params.Ramp_End_Time_us		    =	40;                             % us
 params.Sampling_Rate_ksps		=	8000;							% ksps
-params.Samples_per_Chirp		=	32;    						    % Number of samples per chirp
+params.Samples_per_Chirp		=	64;    						    % Number of samples per chirp
 params.Rx_Gain_dB				=	40;								% dB
 
 % Frame config
-nchirp_loops                    =   128;
+nchirp_loops                    =   252;
 Num_Frames                      =   1000;
 
 params.nchirp_loops			    =	nchirp_loops;					% Number of chirps per frame
 params.Num_Frames				=	Num_Frames;						% number of frames to collect data
-params.Dutycycle                =   0.5;                            % (ON duration)/(ON+OFF duration)
+params.Dutycycle                =   0.7;                            % (ON duration)/(ON+OFF duration)
 params.Chirp_Duration_us        =   (params.Ramp_End_Time_us+params.Idle_Time_us); % us
 params.NumberOfSamplesPerChannel = params.Samples_per_Chirp * nchirp_loops * params.NumAnglesToSweep *params.Num_Frames; %number of ADC samples received per channel. this value is used in HSDC for data capture
 

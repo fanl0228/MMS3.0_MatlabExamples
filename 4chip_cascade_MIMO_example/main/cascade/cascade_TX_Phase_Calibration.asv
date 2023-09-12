@@ -51,9 +51,9 @@ DEBUG_PLOTS = 1;                % optionally display debug plots while calibrati
 numDevices = 4;                 % number of AWRx devices being processed, set to 4, for the full MMWCAS-RF-EVM device array
 numTX = 3;                      % number of AWRx TX channels being processed, set to 3, for the full AWRx device channels
 numRX = 16;                     % number of MMWCAS-RF-EVM RX channels being processed, set to 16, for the full MMWCAS-RF-EVM RX channels
-numPhaseShifterOffsets = 64;    % number of phase-shifter offset increments being processed, set to 64 for full phase-shifter range (number of datasets)
+numPhaseShifterOffsets = 63;    % number of phase-shifter offset increments being processed, set to 64 for full phase-shifter range (number of datasets)
 numChirpsLoopsPerFrame = 12;    % number of chirp-loops per frame. Only a single TX active per chirp-loop. 
-numChirpsPerLoop = 252;          % number of chirps per TX active phase. 
+numChirpsPerLoop = 128;          % number of chirps per TX active phase. 
 numSamplesPerChirp = 64;       % number of samples per chirp
 searchBinsSkip = 19;            % number of bins to skip when looking for peak from corner reflector 
 
@@ -64,8 +64,8 @@ refTX = 1;
 refRX = 1;
 refPhaseOffset = 1;
 
-targetRange = 5.9;  % estimated corner-reflector target range (in meters) 
-dataFolder_calib_data_path = 'E:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\20230912_phase_shifter_cal_test3\'; % folder holding all of the calibration datasets
+targetRange = 5.5;  % estimated corner-reflector target range (in meters) 
+dataFolder_calib_data_path = 'E:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\20230912_phase_shifter_cal_testing2\'; % folder holding all of the calibration datasets
 
 fig1 = figure(1); % FFT magnitude (dB)
 axes1 = axes;
@@ -153,8 +153,7 @@ for idxPS = 1:numPhaseShifterOffsets % loop through phase shifter offset/transmi
             
             if 1
                 figure(100)
-                plot(10*log(abs(calData_1DFFT(:, 1, idxTX, idxRX))))
-                pause(0.05)
+                plot()
             end
 
 

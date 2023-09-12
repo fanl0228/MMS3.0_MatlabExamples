@@ -40,9 +40,9 @@ addpath(genpath('.\RSTD\'))
 LOAD_CALIBRRATION  = 1;
 
 %phase Shifter calibration file
-phaseShiftCalibfile = '.\Calibrations\phaseShifterCalibration.mat';
+phaseShiftCalibfile = 'Calibrations\phaseShifterCalibration.mat';
 %load phase Mismatch calibration vector for TX channels
-phaseMismatchCalibfile = '.\Calibrations\phaseMismatchCalibration.mat';
+phaseMismatchCalibfile = 'Calibrations\phaseMismatchCalibration.mat';
 %chirp config parameters to use
 paramFile = 'chirpProfile_TxBF_USRR';
 
@@ -50,12 +50,12 @@ cmdStr = sprintf('paramsConfig = %s();',paramFile);
 eval(cmdStr);
 
 % Initialize Radarstudio .NET connection
-% RSTD_DLL_Path = 'E:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\Clients\RtttNetClientController\RtttNetClientAPI.dll';
-% ErrStatus = Init_RSTD_Connection(RSTD_DLL_Path);
-% if (ErrStatus ~= 30000)
-%     disp('Error inside Init_RSTD_Connection');
-%     return;
-% end
+RSTD_DLL_Path = 'E:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\Clients\RtttNetClientController\RtttNetClientAPI.dll';
+ErrStatus = Init_RSTD_Connection(RSTD_DLL_Path);
+if (ErrStatus ~= 30000)
+    disp('Error inside Init_RSTD_Connection');
+    return;
+end
 
 %loads phase shifter calibrations. Measured zero angle data in DEGREES,
 load(phaseShiftCalibfile);  % Ph 变量 mat

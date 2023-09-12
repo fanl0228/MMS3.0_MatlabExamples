@@ -41,10 +41,10 @@ addpath(genpath('.\cascade_json_parser\'))
 %load the adc data params
 %BF_data_dest0 = 'E:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\TXBF_BeamAngle31\';
 %% todo
-BF_data_dest0 = 'D:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\TxBF_USRR_BeamAngle_beamsteering[-30,5,30]\';
+BF_data_dest0 = 'E:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\TxBF_USRR_BeamAngle_test2\';
 
 %% define what angles to steer in TX beamforming mode
-paramsConfig.anglesToSteer=[-30:5:30]; 
+paramsConfig.anglesToSteer=[1]; 
 
 % Only Frame based supported in the Post-processing script
 paramsConfig.Chirp_Frame_BF = 0; % 1 - chirp based beam steering, 0 - frame based beam steering
@@ -55,7 +55,7 @@ paramsConfig.NumAnglesToSweep = length(paramsConfig.anglesToSteer);
 paramsConfig = parameter_gen_from_Jason(BF_data_dest0, paramsConfig);
 
 %load MIMO calbibration params
-calibrationFilePath = '.\PostProc\calibrateResults_high.mat';
+calibrationFilePath = 'PostProc\calibrateResults_high.mat';
 load(calibrationFilePath);
 paramsConfig.Slope_MHzperus_calib = params.Slope_MHzperus;
 BF_MIMO_ref = calibResult.RxMismatch;
@@ -107,7 +107,7 @@ for i_file = 1:(length(fileIdx_unique))
         % radar_data_TXBF[nSamples, nChirps, nRx, nBeams]
         radar_data_TXBF = radar_data_TXBF(:,:,paramsConfig.TI_Cascade_RX_ID,:);
         % -----------------process TXBF data
-        if frameId < 100
+        if frameId < 1
             figure(1)
             startRangeInd = 5;
             lastRangeIndToThrow = 20;
@@ -130,7 +130,7 @@ for i_file = 1:(length(fileIdx_unique))
         DopplerFFT = fft(rangeFFT, paramsConfig.nchirp_loops, 2);            
 
         % estimate the range bin, plot all beam angle range fft         
-        if frameId < 2
+        if frameId < 100
             figure(12);
             for i = 1:length(paramsConfig.anglesToSteer)
                 plot(abs(rangeFFT(:, 1, 1, i)), LineWidth=1);
