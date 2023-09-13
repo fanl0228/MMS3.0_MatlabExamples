@@ -76,7 +76,8 @@ else
     %associated with the data
     params_chirp = JsonParser(paramFile);  
     
-    numChirpConfig = length(params_chirp.DevConfig(1).Chirp);
+    % TODO:2023-09-13 hard code 
+    numChirpConfig = 12 %length(params_chirp.DevConfig(1).Chirp);
     numTXPerDev = 3;
     totTx = numTXPerDev*params_chirp.NumDevices;
     TxEnableTable = zeros(numChirpConfig, totTx);
