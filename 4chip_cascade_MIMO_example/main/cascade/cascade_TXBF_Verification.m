@@ -41,6 +41,7 @@
 tic
 clearvars
 close all
+setenv('CASCADE_SIGNAL_PROCESSING_CHAIN_MIMO', 'D:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\MMS3.0_MatlabExamples\4chip_cascade_MIMO_example')
 
 pro_path = getenv('CASCADE_SIGNAL_PROCESSING_CHAIN_MIMO');
 input_path = strcat(pro_path,'\main\cascade\input\');
@@ -53,9 +54,9 @@ numTX = 3;                      % number of AWRx TX channels being processed, se
 numRX = 16;                     % number of MMWCAS-RF-EVM RX channels being processed, set to 16, for the full MMWCAS-RF-EVM RX channels
 numPhaseShifterOffsets = 64;    % number of phase-shifter offset increments being processed, set to 64 for full phase-shifter range (number of datasets)
 numChirpsLoopsPerFrame = 12;    % number of chirp-loops per frame. Only a single TX active per chirp-loop. 
-numChirpsPerLoop = 128;         % number of chirp loops
-numSamplesPerChirp = 256;       % number of samples per chirp
-searchBinsSkip = 40;            % number of bins to skip when looking for peak from corner reflector 
+numChirpsPerLoop = 252;         % number of chirp loops
+numSamplesPerChirp = 128;       % number of samples per chirp
+searchBinsSkip = 65;            % number of bins to skip when looking for peak from corner reflector 
 
 % select reference TX/Device channel for computing offsets - determined by 
 % TX antenna array geometry and phase-shifter offset utilization (all RX
@@ -64,8 +65,8 @@ refTX = 10;
 refPhaseOffset = 1;
 
 targetRange = 2.3;  % estimated corner-reflector target range (in meters) 
-dataFolder_calib_data_path = 'C:\Radar_Data\20200721_phase_shifter_cal_testing\20200723_testdata_SN5733600017_outdoor_TXBF_test1\nocal\'; % folder holding all of the calibration datasets
-%dataFolder_calib_data_path = 'C:\Radar_Data\20200721_phase_shifter_cal_testing\20200723_testdata_SN5733600017_outdoor_TXBF_test1\cal\'; % folder holding all of the calibration datasets
+dataFolder_calib_data_path = 'I:\20230915_TXBF_AngleSweep_Vib_test3_range2.1m\'; % folder holding all of the calibration datasets
+%dataFolder_calib_data_path = 'I:\20230914_TXBF_AngleSweep_test4'; % folder holding all of the calibration datasets
 
 fig1 = figure(1); % FFT magnitude (dB)
 axes1 = axes;
@@ -111,7 +112,7 @@ end
 
 folderIdx = folderIdxStart; % start at first index that is a folder
 
-for idxTheta = 1:31 % loop through all beam steering angles
+for idxTheta = 1:19 % loop through all beam steering angles
 
     if(dataFolder_calib_data_info(folderIdx).isdir) 
         disp(['dataFolder_calib_data_info(folderIdx).name = ', dataFolder_calib_data_info(folderIdx).name]);
@@ -141,18 +142,25 @@ for idxTheta = 1:31 % loop through all beam steering angles
     %calData(deviceIdx, TXIdx, PSIdx, :, :, :) = cascade_Read_TX_Cal_Data(genCalibrationMatrixObj);
     calData = cascade_Read_TX_Cal_Data(genCalibrationMatrixObj);
           
-
+    datacolor = colormap(jet(numChirpsLoopsPerFrame));
     for idxTX = 1:1 % loop through each TX phase   
         for idxRX = 1:1 % loop through each RX        
 
-            calData_1DFFT(:, :, idxTX, idxRX, idxTheta) = fftshift(fft(calData(:, :, idxRX, idxTX), genCalibrationMatrixObj.numSamplePerChirp, 1));
-            calData_2DFFT(:, :, idxTX, idxRX, idxTheta) = 1/(numChirpsPerLoop) * fftshift(fft(calData_1DFFT(:, :, idxTX, idxRX, idxTheta), numChirpsPerLoop, 2));
+            calData_1DFFT(:, :, idxTX, idxRX, idxTheta) = fftshift(fft(calData(:, :, idxRX, idxTX), genCalibrationMatrixObj.numSamplePerChirp, 1), 1);
+            calData_2DFFT(:, :, idxTX, idxRX, idxTheta) = 1/(numChirpsPerLoop) * fftshift(fft(calData_1DFFT(:, :, idxTX, idxRX, idxTheta), numChirpsPerLoop, 2),2);
             
           
             % find target peak bin in 2D-FFT 0-velocity bin (skip close
             % bins to avoid DC leakage or bumper reflections
-            [TargetBinValue, TargetBinIdx] = max(abs(squeeze(calData_2DFFT(searchBinsSkip:numSamplesPerChirp, numChirpsPerLoop/2 + 1, idxTX, idxRX, idxTheta))));
-            peakValuesBin(idxTX, idxRX, idxTheta) = TargetBinIdx + searchBinsSkip - 1;
+            
+            %[TargetBinValue, TargetBinIdx] = max(abs(squeeze(calData_1DFFT(searchBinsSkip:numSamplesPerChirp*3/4, numChirpsPerLoop/2 + 1, idxTX, idxRX, idxTheta))));
+            %peakValuesBin(idxTX, idxRX, idxTheta) = TargetBinIdx + searchBinsSkip - 1;
+
+            Data_2DFFT_Mean_logPower = 10*log(mean(abs(squeeze(calData_2DFFT(:, [1:genCalibrationMatrixObj.nchirp_loops/2, genCalibrationMatrixObj.nchirp_loops/2+2:genCalibrationMatrixObj.nchirp_loops], idxRX, idxTheta))), 2));
+            [TargetBinValue, TargetBinIdx] = max(Data_2DFFT_Mean_logPower([genCalibrationMatrixObj.numSamplePerChirp/2+2:genCalibrationMatrixObj.numSamplePerChirp]));
+            peakValuesBin(idxTX, idxRX, idxTheta) = TargetBinIdx + genCalibrationMatrixObj.numSamplePerChirp/2+2;
+
+
             %peakValuesBin(idxTX, idxRX, idxTheta) = TargetBinIdx;
             peakValuesTargetDistance(idxTX, idxRX, idxTheta) = TargetBinIdx * genCalibrationMatrixObj.rangeResolution;
 
@@ -166,6 +174,20 @@ for idxTheta = 1:31 % loop through all beam steering angles
             if(DEBUG_PLOTS)
 
 
+                if (idxRX == 1)
+                    figure(100)
+                    plot(abs(calData_1DFFT(:, :, idxTX, idxRX, idxTheta)), 'color', datacolor(idxTX,:));
+                    title("1D Range FFT")
+                    pause(0.05)
+                                    
+                    figure(101)
+                    plot(10*log(abs(calData_2DFFT(:, [genCalibrationMatrixObj.nchirp_loops/2+2:genCalibrationMatrixObj.nchirp_loops], idxTX, idxRX, idxTheta))));
+                    title("After 2D Doppler FFT")
+                    pause(0.05)
+                end
+
+
+
                 plot(axes1, 10*log(abs(calData_2DFFT(:, numChirpsPerLoop/2 + 1, idxTX, idxRX, idxTheta))));
                 hold(axes1, 'on');
                 plot(axes1, 10*log(mean(abs(squeeze(calData_2DFFT(:, [1:numChirpsPerLoop/2, numChirpsPerLoop/2+2:numChirpsPerLoop], idxTX, idxRX, idxTheta))), 2)));
@@ -174,6 +196,14 @@ for idxTheta = 1:31 % loop through all beam steering angles
                 title(axes1, 'Calibration Target IF Spectrum');
                 xlabel(axes1, 'Beam Steering Angle (degrees)'); 
                 ylabel(axes1, '2D-FFT (0-velocity) Magnitude (dB)');
+
+                plot(axes2, angle(squeeze(calData_2DFFT(:, numChirpsPerLoop/2 + 1, idxTX, idxRX))) * 180 / pi );
+                hold(axes2, 'on');
+                plot(axes2, peakValuesBin(idxTX, idxRX, idxTheta), angle(squeeze(calData_2DFFT(idxTX, idxRX, idxTheta))) * 180 / pi, '-o', 'color', 'red');
+                hold(axes2, 'off');                
+                title(axes2, 'Calibration Target Phase vs. IF bins');
+                xlabel(axes2, '1D-FFT Spectrum (bins)');
+                ylabel(axes2, '1D-FFT Phase (degrees)');
 
                 plot(axes3, squeeze(peakValuesBin(idxTX, idxRX, :)));                
                 title(axes3, 'Calibration Target Detected Index');

@@ -47,7 +47,7 @@ deltaPhi = 360/64;              % ideal AWRx phase shifter discrete value in deg
 
 deltaTheta = 1.0;               % beam-steering angle offset
 %theta = 80:deltaTheta:100;     % beam-steering angle array -- defined
-theta = -15:deltaTheta:15;      % beam-steering angle array
+theta = -60:deltaTheta:60;      % beam-steering angle array
 numPsOffsets = 64;
 
 psOffsetCal = zeros(numAnts, numPsOffsets); % phase offset cal LUT 
@@ -60,7 +60,7 @@ DEBUG_PLOTS = 1;
 %% load and process phase shifter offset cal data
 
 %phase Shifter calibration file
-phaseShiftCalFile = 'C:\Radar_Data\20200721_phase_shifter_cal_testing\20200723_testdata_SN5733600017_outdoor_cal1\calibrateTXPhaseResults.mat'; 
+phaseShiftCalFile = 'I:\20230914_CAL_PhaseShift_test4\calibrateTXPhaseResults.mat'; 
 load(phaseShiftCalFile);
 
 % Read in AWRx #2, #3, and #4 data - this is the azimuth linear array
@@ -159,10 +159,12 @@ psError = zeros(length(theta), numAnts);
 %% calculated TX phase calibration data
 for thetaIdx = 1:length(theta)
    
-   [psSettingIdeal(thetaIdx, :), psSettingProgram(thetaIdx, :), ... 
-    psSettingProgramVal(thetaIdx, :), psSettingProgramCal(thetaIdx, :), ... 
-    psSettingProgramCalVal(thetaIdx, :), psError(thetaIdx, :)] = ... 
-    TXBF_Calc_Phase_Settings(theta(thetaIdx), lambda, d, numAnts, psOffsetCal);
+   [psSettingIdeal(thetaIdx, :), ... 
+    psSettingProgram(thetaIdx, :), ... 
+    psSettingProgramVal(thetaIdx, :), ...
+    psSettingProgramCal(thetaIdx, :), ... 
+    psSettingProgramCalVal(thetaIdx, :), ...
+    psError(thetaIdx, :)] = TXBF_Calc_Phase_Settings(theta(thetaIdx), lambda, d, numAnts, psOffsetCal);
     
 end
 

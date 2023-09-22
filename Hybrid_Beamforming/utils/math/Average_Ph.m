@@ -30,21 +30,21 @@
 %   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %  
 
+%Average_Ph.m
+%
+% Average_Ph function tTakes input an array of angles in RADIAN units
+% Output is average of the angles in RADIAN units
 
-dataPlatform = 'TDA2'; 
-%pass the chirp parameters associated with test data 
-numADCSample = 1.280000e+02; 
-adcSampleRate = 1.000000e+07; %Hz/s 
-startFreqConst = 7.700000e+10; %Hz 
-chirpSlope = 5.001800e+13; %Hz/s 
-chirpIdleTime = 1.000000e-03; %s 
-adcStartTimeConst = 6.000000e-06; %s 
-chirpRampEndTime = 3.000000e-05; %s 
-framePeriodicty = 2.800000e-01; 
-NumDevices = 4; 
-numTxAnt = 12; 
-nchirp_loops = 252; 
-TxToEnable = [4   5   6   7   8   9  10  11  12];
-numRxToEnable = 16; 
-centerFreq = 7.732012e+01; 
-%pass all other parameters 
+%input:
+%   Ph_Arr_Rad: an array of angles in RADIAN units
+
+%output:
+%   Avg_Ph: Output is average of the angles in RADIAN units
+
+
+
+function Avg_Ph = Average_Ph(Ph_Arr_Rad)
+    diff_Ph = angle(exp(1i*(Ph_Arr_Rad - Ph_Arr_Rad(1))));
+    Ph_Arr_Rad = Ph_Arr_Rad(1)+diff_Ph;
+    Avg_Ph = mean(Ph_Arr_Rad);
+end

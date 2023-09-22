@@ -30,21 +30,46 @@
 %   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %  
 
+% get number of valid frames in the associated *_data.bin file captured
+% with TDA2 platform
 
-dataPlatform = 'TDA2'; 
-%pass the chirp parameters associated with test data 
-numADCSample = 1.280000e+02; 
-adcSampleRate = 1.000000e+07; %Hz/s 
-startFreqConst = 7.700000e+10; %Hz 
-chirpSlope = 5.001800e+13; %Hz/s 
-chirpIdleTime = 1.000000e-03; %s 
-adcStartTimeConst = 6.000000e-06; %s 
-chirpRampEndTime = 3.000000e-05; %s 
-framePeriodicty = 2.800000e-01; 
-NumDevices = 4; 
-numTxAnt = 12; 
-nchirp_loops = 252; 
-TxToEnable = [4   5   6   7   8   9  10  11  12];
-numRxToEnable = 16; 
-centerFreq = 7.732012e+01; 
-%pass all other parameters 
+% File header in *_idx.bin:
+%     struct Info
+%     {
+%         uint32_t tag;
+%         uint32_t version;
+%         uint32_t flags;
+%         uint32_t numIdx;       // number of frames 
+%         uint64_t dataFileSize; // total data size written into file
+%     };
+% 
+% Index for every frame from each radar:
+%     struct BuffIdx
+%     {
+%         uint16_t tag;
+%         uint16_t version; /*same as Info.version*/
+%         uint32_t flags;
+%         uint16_t width;
+%         uint16_t height;
+%         uint32_t pitchOrMetaSize[4]; /*For image data, this is pitch.
+%                                                        For raw data, this is size in bytes per metadata plane.*/
+%         uint32_t size; /*total size in bytes of the data in the buffer (sum of all planes)*/
+%         uint64_t timestamp;
+%         uint64_t offset;
+%     };
+
+
+function [numIdx dataFileSize] = getValidNumFrames(adcIdxFileName)
+
+idxFile = fopen(adcIdxFileName,'r');
+heaferInfoSize = 6;
+heaferInfo = fread(idxFile, heaferInfoSize,'uint32');
+numIdx = heaferInfo(4); % number of effective frame
+fclose(idxFile);
+idxFile = fopen(adcIdxFileName,'r');
+heaferInfoSize = 3;
+heaferInfo = fread(idxFile, heaferInfoSize,'uint64');
+dataFileSize = heaferInfo(3); % data size for the effective number of frames
+fclose(idxFile);
+
+end

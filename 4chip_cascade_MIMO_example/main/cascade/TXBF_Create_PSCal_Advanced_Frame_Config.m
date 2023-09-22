@@ -10,7 +10,7 @@ clear all;
 close all;
 
 %%load TX phase shifter calibration file
-phaseShiftCalFile = 'R:\Radar_Data\20200721_phase_shifter_cal_testing\20200723_testdata_SN5733600017_outdoor_cal1\calibrateTXPhaseResults.mat'; 
+phaseShiftCalFile = 'D:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\20230913_Range7.9m\20230913_phase_shifter_cal_test1\calibrateTXPhaseResults.mat'; 
 load(phaseShiftCalFile);
 
 numTX = 12;

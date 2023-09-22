@@ -29,22 +29,31 @@
 %   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 %   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %  
+% 
 
+% Set the module name and parameter file and debugMode and enable 
+function obj = moduleInit(obj, varargin)             
+% set parameter file name
+index = find(strcmp(varargin,'pfile'));
+obj.pfile = varargin{index + 1};
 
-dataPlatform = 'TDA2'; 
-%pass the chirp parameters associated with test data 
-numADCSample = 1.280000e+02; 
-adcSampleRate = 1.000000e+07; %Hz/s 
-startFreqConst = 7.700000e+10; %Hz 
-chirpSlope = 5.001800e+13; %Hz/s 
-chirpIdleTime = 1.000000e-03; %s 
-adcStartTimeConst = 6.000000e-06; %s 
-chirpRampEndTime = 3.000000e-05; %s 
-framePeriodicty = 2.800000e-01; 
-NumDevices = 4; 
-numTxAnt = 12; 
-nchirp_loops = 252; 
-TxToEnable = [4   5   6   7   8   9  10  11  12];
-numRxToEnable = 16; 
-centerFreq = 7.732012e+01; 
-%pass all other parameters 
+% set module name
+if(isempty(find(strcmp(varargin,'name'), 1)))
+    error('Need to privide the module name');
+end
+index = find(strcmp(varargin,'name'));
+obj.name = varargin{index + 1};
+
+% Check for enable parameter
+try
+    obj.enable = getParameter(obj, 'enable');
+catch
+    obj.enable = 0;
+end
+% Check for debug parameter
+try
+    obj.debugMode = getParameter(obj, 'debugMode');
+catch
+    obj.debugMode = 0;
+end
+            

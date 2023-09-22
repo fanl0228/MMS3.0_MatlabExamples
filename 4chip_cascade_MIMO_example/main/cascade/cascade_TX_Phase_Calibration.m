@@ -55,9 +55,9 @@ numTX = 3;                      % number of AWRx TX channels being processed, se
 numRX = 16;                     % number of MMWCAS-RF-EVM RX channels being processed, set to 16, for the full MMWCAS-RF-EVM RX channels
 numPhaseShifterOffsets = 64;    % number of phase-shifter offset increments being processed, set to 64 for full phase-shifter range (number of datasets)
 numChirpsLoopsPerFrame = 12;    % number of chirp-loops per frame. Only a single TX active per chirp-loop. 
-numChirpsPerLoop = 252;         % number of chirps per TX active phase. 
-numSamplesPerChirp = 64;        % number of samples per chirp
-searchBinsSkip = 33;            % number of bins to skip when looking for peak from corner reflector, reference value: numSamplesPerChirp / 2 + 1 
+numChirpsPerLoop = 128;         % number of chirps per TX active phase. 
+numSamplesPerChirp = 256;        % number of samples per chirp
+searchBinsSkip = 129;            % number of bins to skip when looking for peak from corner reflector, reference value: numSamplesPerChirp / 2 + 1 
 
 % select reference TX/Device channel for computing offsets - determined by 
 % TX antenna array geometry and phase-shifter offset utilization (all RX
@@ -66,23 +66,26 @@ refTX = 1;
 refRX = 1;
 refPhaseOffset = 1;
 
-targetRange = 5.9;  % estimated corner-reflector target range (in meters) 
-dataFolder_calib_data_path = 'D:\ti\mmwave_studio_03_00_00_14\mmWaveStudio\PostProc\20230912_phase_shifter_cal_test3\'; % folder holding all of the calibration datasets
+targetRange = 2.7;  % estimated corner-reflector target range (in meters) 
+dataFolder_calib_data_path = 'I:\20230914_CAL_PhaseShift_test66\'; % folder holding all of the calibration datasets
 
-fig1 = figure(1); % FFT magnitude (dB)
-axes1 = axes;
-
-fig2 = figure(2); % FFT phase (deg)
-axes2 = axes;
-
-fig3 = figure(3); % accumulated target bin values
-axes3 = axes;
-
-fig4 = figure(4); % accumulated target distance values
-axes4 = axes;
-
-fig5 = figure(5); % accumulated target phase angle values
-axes5 = axes;
+% debug plots 
+if(DEBUG_PLOTS)
+    fig1 = figure(1); % FFT magnitude (dB)
+    axes1 = axes;
+    
+    fig2 = figure(2); % FFT phase (deg)
+    axes2 = axes;
+    
+    fig3 = figure(3); % accumulated target bin values
+    axes3 = axes;
+    
+    fig4 = figure(4); % accumulated target distance values
+    axes4 = axes;
+    
+    fig5 = figure(5); % accumulated target phase angle values
+    axes5 = axes;
+end
 
 fig6 = figure(6); % plot phase offset values
 axes6 = axes;
@@ -146,34 +149,17 @@ for idxPS = 1:numPhaseShifterOffsets % loop through phase shifter offset/transmi
     %calData(deviceIdx, TXIdx, PSIdx, :, :, :) = cascade_Read_TX_Cal_Data(genCalibrationMatrixObj);
     calData = cascade_Read_TX_Cal_Data(genCalibrationMatrixObj);
           
-
+    
+    datacolor = colormap(jet(numChirpsLoopsPerFrame));
     for idxTX = 1:numChirpsLoopsPerFrame % loop through each TX phase   
         for idxRX = 1:numRX % loop through each RX
         
-
             calData_1DFFT(:, :, idxTX, idxRX) = fftshift(fft(calData(:, :, idxRX, idxTX), genCalibrationMatrixObj.numSamplePerChirp, 1), 1);
             calData_2DFFT(:, :, idxTX, idxRX) = 1/(numChirpsPerLoop) * fftshift(fft(calData_1DFFT(:, :, idxTX, idxRX), numChirpsPerLoop, 2),2);
             
-            if idxRX == 0
-                figure(100)
-                plot(abs(10*log(calData_1DFFT(:, 1, idxTX, idxRX))));
-                hold on;
-                pause(0.05)
-                                
-                figure(101)
-                plot(abs(10*log(calData_2DFFT(:, 1, idxTX, idxRX))));
-                pause(0.05)
-
-                figure(102)
-                image(abs(10*log(calData_2DFFT(:, 1, idxTX, idxRX))));
-                pause(0.05)
-            end
-
-
-          
             % find target peak bin in 2D-FFT 0-velocity bin (skip close
             % bins to avoid DC leakage or bumper reflections
-            [TargetBinValue, TargetBinIdx] = max(abs(squeeze(calData_2DFFT(searchBinsSkip:numSamplesPerChirp, numChirpsPerLoop/2 + 1, idxTX, idxRX))));
+            [TargetBinValue, TargetBinIdx] = max(abs(squeeze(calData_2DFFT(searchBinsSkip:numSamplesPerChirp*3/4, numChirpsPerLoop/2 + 1, idxTX, idxRX))));
             phaseValuesBin(idxTX, idxRX, idxPS) = TargetBinIdx + searchBinsSkip - 1;
             phaseValuesTargetDistance(idxTX, idxRX, idxPS) = TargetBinIdx * genCalibrationMatrixObj.rangeResolution;
 
@@ -182,6 +168,20 @@ for idxPS = 1:numPhaseShifterOffsets % loop through phase shifter offset/transmi
 
             % debug plots 
             if(DEBUG_PLOTS)
+
+                
+
+                if (idxRX == 1)
+                    figure(100)
+                    plot(abs(calData_1DFFT(:, :, idxTX, idxRX)), 'color', datacolor(idxTX,:));
+                    title("1D Range FFT")
+                    pause(0.05)
+                                    
+                    figure(101)
+                    plot(abs(calData_2DFFT(:, :, idxTX, idxRX)));
+                    title("After 2D Doppler FFT")
+                    pause(0.05)
+                end
 
 
                 plot(axes1, 10*log(abs(squeeze(calData_2DFFT(:, numChirpsPerLoop/2 + 1, idxTX, idxRX)))));
@@ -225,16 +225,12 @@ for idxPS = 1:numPhaseShifterOffsets % loop through phase shifter offset/transmi
             
             
         end   
-        
-        
-        
+               
     end
 
     folderIdx = folderIdx + 1;
 
 end
-
-
 
 
 
@@ -257,22 +253,16 @@ for idxTX = 1:numChirpsLoopsPerFrame % loop through transmitter/device
 end
 
 
+datacolor = colormap(jet(numChirpsLoopsPerFrame));
+phase_shift_values = 0:5.625:5.625*64-1;
+for TXIdx = 1:numChirpsLoopsPerFrame % loop through transmitter/device
+    for RXIdx = 2:2 % loop through receivers   
 
+        plot(axes6, squeeze(phaseValues(TXIdx, RXIdx, :)), 'color', datacolor(TXIdx,:));
+        hold(axes6, 'on');
 
- 
-    phase_shift_values = 0:5.625:5.625*64-1;
-   
-    for TXIdx = 1:numChirpsLoopsPerFrame % loop through transmitter/device
-        for RXIdx = 2:2 % loop through receivers   
-
-            plot(axes6, squeeze(phaseValues(TXIdx, RXIdx, :)), 'color',[TXIdx/numChirpsLoopsPerFrame, TXIdx/numChirpsLoopsPerFrame,  RXIdx * 0.0625]);
-            hold(axes6, 'on');
-
-        end
     end
-   
-
-    
+end
 %% plot results
 title(axes6, 'TX Channel Target Phase Value (deg) vs. TX Phase-Shifter Offset Value (5.625 deg increment)');
 xlabel(axes6, 'TX Phase-Shifter Offset Value (5.625 deg increment)'); 
@@ -285,7 +275,7 @@ grid(axes6, 'on');
 for TXIdx = 1:numChirpsLoopsPerFrame % loop through transmitter/device
     for RXIdx = 1:1 % loop through receivers    
 
-        plot(axes7, squeeze(phaseOffsetValues(TXIdx, RXIdx, :)), 'color',[TXIdx/numChirpsLoopsPerFrame, TXIdx/numChirpsLoopsPerFrame,  RXIdx * 0.0625]);
+        plot(axes7, squeeze(phaseOffsetValues(TXIdx, RXIdx, :)), 'color',datacolor(TXIdx,:));
         hold(axes7, 'on');
 
     end

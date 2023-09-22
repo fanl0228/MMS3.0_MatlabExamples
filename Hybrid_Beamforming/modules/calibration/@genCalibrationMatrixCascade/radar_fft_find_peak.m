@@ -29,22 +29,42 @@
 %   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 %   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %  
+% 
+%radar_fft_find_peak.m
+%
+%This function finds the peak location and complex value that corresponds to the
+%calibration target.
+%
+%input
+%   obj: object instance of genCalibrationMatrixCascade
+%   Rx_Data: input adc data 
+%   range_bin_search_min: start of the range bin to search for peak
+%   range_bin_search_max: end of the range bin to search for peak
+%
 
+% Output:
+%   Angle_FFT_Peak: Phase at bin specified by FRI_fixed OR Phase at
+%                         highest peak after neglecting DC peaks
+%   Val_FFT_Peak: Complex value at bin specified by FRI_fixed OR
+%                   Complex value at highest peak after neglecting DC peaks
+%   Fund_range_Index: Bin number for highest peak after neglecting DC
+%                     peaks
+%   Rx_fft: Complex FFT values
 
-dataPlatform = 'TDA2'; 
-%pass the chirp parameters associated with test data 
-numADCSample = 1.280000e+02; 
-adcSampleRate = 1.000000e+07; %Hz/s 
-startFreqConst = 7.700000e+10; %Hz 
-chirpSlope = 5.001800e+13; %Hz/s 
-chirpIdleTime = 1.000000e-03; %s 
-adcStartTimeConst = 6.000000e-06; %s 
-chirpRampEndTime = 3.000000e-05; %s 
-framePeriodicty = 2.800000e-01; 
-NumDevices = 4; 
-numTxAnt = 12; 
-nchirp_loops = 252; 
-TxToEnable = [4   5   6   7   8   9  10  11  12];
-numRxToEnable = 16; 
-centerFreq = 7.732012e+01; 
-%pass all other parameters 
+function [Rx_fft,Angle_FFT_Peak, Val_FFT_Peak,Fund_range_Index] = radar_fft_find_peak(obj, Rx_Data,range_bin_search_min,range_bin_search_max)
+Effective_Num_Samples = length(Rx_Data);
+wind = hann_local(Effective_Num_Samples);
+wind = wind/rms(wind);
+interp_fact = obj.calibrationInterp;
+
+Rx_Data_prefft = Rx_Data.*wind;
+Rx_fft = (fft(Rx_Data_prefft,interp_fact*Effective_Num_Samples));
+
+Rx_fft_searchwindow = abs(Rx_fft(range_bin_search_min:range_bin_search_max));
+[~,Fund_range_Index]= max(Rx_fft_searchwindow(:));
+Fund_range_Index = Fund_range_Index+range_bin_search_min-1;
+
+Angle_FFT_Peak = angle(Rx_fft(Fund_range_Index))*180/pi;
+Val_FFT_Peak = Rx_fft(Fund_range_Index);
+
+end

@@ -29,22 +29,51 @@
 %   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 %   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %  
+% 
 
+function [fileNameStruct]= getBinFileNames_withIdx(folderName, fileIdx)
+% Description : Given a folder name and fileIdx it returns the FileName corresponding
+% to the Master, slave1, slave2, slave3 binary files
+% Input : folderName : The name of the folder in which the data is saved
+% Output : 
 
-dataPlatform = 'TDA2'; 
-%pass the chirp parameters associated with test data 
-numADCSample = 1.280000e+02; 
-adcSampleRate = 1.000000e+07; %Hz/s 
-startFreqConst = 7.700000e+10; %Hz 
-chirpSlope = 5.001800e+13; %Hz/s 
-chirpIdleTime = 1.000000e-03; %s 
-adcStartTimeConst = 6.000000e-06; %s 
-chirpRampEndTime = 3.000000e-05; %s 
-framePeriodicty = 2.800000e-01; 
-NumDevices = 4; 
-numTxAnt = 12; 
-nchirp_loops = 252; 
-TxToEnable = [4   5   6   7   8   9  10  11  12];
-numRxToEnable = 16; 
-centerFreq = 7.732012e+01; 
-%pass all other parameters 
+currentFolder = pwd;
+cd(folderName);
+listing = dir(strcat('*',fileIdx,'_data.bin'));
+listing_idx = dir(strcat('*',fileIdx,'_idx.bin'));
+
+cd(currentFolder);
+
+if (length(listing)>4)   
+    error('Too many binary Files corresponding to the same fileIdx')
+else
+    
+for ii=1:length(listing)    
+    if (strfind(listing(ii).name,'master'))
+        fileNameStruct.master = listing(ii).name;
+    end
+    if (strfind(listing(ii).name,'slave1'))
+        fileNameStruct.slave1 = listing(ii).name;
+    end
+    if (strfind(listing(ii).name,'slave2'))
+        fileNameStruct.slave2 = listing(ii).name;
+    end
+    if (strfind(listing(ii).name,'slave3'))
+        fileNameStruct.slave3 = listing(ii).name;
+    end
+    if (strfind(listing_idx(ii).name,'master'))
+        fileNameStruct.masterIdxFile = listing_idx(ii).name;
+    end
+    if (strfind(listing_idx(ii).name,'slave1'))
+        fileNameStruct.slave1IdxFile = listing_idx(ii).name;
+    end
+    if (strfind(listing_idx(ii).name,'slave2'))
+        fileNameStruct.slave2IdxFile = listing_idx(ii).name;
+    end
+    if (strfind(listing_idx(ii).name,'slave3'))
+        fileNameStruct.slave3IdxFile = listing_idx(ii).name;
+    end
+end
+    fileNameStruct.dataFolderName = folderName;
+    
+end
