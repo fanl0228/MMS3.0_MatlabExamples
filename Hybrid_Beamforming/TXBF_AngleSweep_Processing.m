@@ -49,7 +49,7 @@ clear(pathGenParaFile);
 %module_param_file defines parameters to init each signal processing
 %module 
 % module_param_antennaCalib.m
-module_param_file = [input_path, 'module_param_antennaCalib.m']; 
+module_param_file = [input_path, 'module_param.m']; 
 
 searchBinsSkip = 64;            % number of bins to skip when looking for peak from corner reflector 
 Start_Freq_GHz = 77;
@@ -459,14 +459,15 @@ clearvars range_angle_stich;
 clearvars SweepAngles;
 clearvars range_angle_stich_half;
 
-%%
+%% 绘制所有的 range doppler 信号
+
 TargetBin_Vis = TargetPeakValueBin;
 Frame_Vis = 2;
-for i = 1:size(gBeam_RangeDoppler_Profile,1)
-    figure(133+i)
-    imagesc(10*log10(abs(squeeze(gBeam_RangeDoppler_Profile(i, Frame_Vis, :, :, 1)))));
-    title("After 2D Range-Doppler FFT");
-end
+% for i = 1:size(gBeam_RangeDoppler_Profile,1)
+%     figure(133+i)
+%     imagesc(10*log10(abs(squeeze(gBeam_RangeDoppler_Profile(i, Frame_Vis, :, :, 1)))));
+%     title("After 2D Range-Doppler FFT");
+% end
 
 sumDoppler_log(:,:) = 10*log10(abs(squeeze(sum(gBeam_RangeDoppler_Profile(:, Frame_Vis, :, :, 1),4))));
 CM13= colormap(jet(size(sumDoppler_log,1)));

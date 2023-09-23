@@ -101,7 +101,10 @@ classdef DOACascade < Module
                 current_obj = detected_obj(i_obj);
                 estSNR = 10*log10(sum(abs(current_obj.bin_val).^2)/sum(current_obj.noise_var));
                 X = current_obj.bin_val; 
+
+                % calculate the covariance of 16Rx
                 R = X*X';
+
                 switch obj.method
                     
                     case 1

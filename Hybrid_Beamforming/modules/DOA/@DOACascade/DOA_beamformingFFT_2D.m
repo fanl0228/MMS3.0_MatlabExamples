@@ -98,7 +98,7 @@ if apertureLen_elev ==1
     for i_obj = 1:length(peakLoc_azim)
         ind = peakLoc_azim(i_obj);
         
-        azim_est = asind(wx_vec(ind)/(2*pi*d));
+        azim_est = asind(wx_vec(ind)/(2*pi*d)); % 估算目标所在的角度值
         if (azim_est >= angles_DOA_az(1) && azim_est <= angles_DOA_az(2))
             angleObj_est(1,obj_cnt) = azim_est;
             angleObj_est(2,obj_cnt) = 0;

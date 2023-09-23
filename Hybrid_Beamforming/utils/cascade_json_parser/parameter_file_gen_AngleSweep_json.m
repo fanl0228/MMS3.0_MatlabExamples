@@ -93,7 +93,7 @@ else
     end
     
    
-    %TxChannelEnabled = zeros(1,numChirpConfig);
+    %TxChannelEnabled = zeros(1, numChirpConfig);
     for iconfig = 1:numChirpConfig
         [channelID] = find(TxEnableTable(iconfig,:)~=0);    
         %TxChannelEnabled(iconfig) = 13 - channelID; 

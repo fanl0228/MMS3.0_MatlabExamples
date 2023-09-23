@@ -266,21 +266,21 @@ while ~feof(fidList)
                         title('range/azimuth heat map static objects')
                        
                         
-    if (DISPLAY_RANGE_AZIMUTH_DYNAMIC_HEATMAP)                   
-    figure(2)
-    subplot(121);
-    surf(y_axis, x_axis, (mag_data_static(:,:,frameCountGlobal)).^0.4,'EdgeColor','none');
-    view(2);
-    xlabel('meters');    ylabel('meters')
-    title({'Static Range-Azimuth Heatmap',strcat('Current Frame Number = ', num2str(frameCountGlobal))})
-    
-    subplot(122);
-    surf(y_axis, x_axis, (mag_data_dynamic(:,:,frameCountGlobal)).^0.4,'EdgeColor','none');
-    view(2);    
-    xlabel('meters');    ylabel('meters')
-    title('Dynamic HeatMap')
-    end
-    pause(0.1) 
+                        if (DISPLAY_RANGE_AZIMUTH_DYNAMIC_HEATMAP)                   
+                            figure(2)
+                            subplot(121);
+                            surf(y_axis, x_axis, (mag_data_static(:,:,frameCountGlobal)).^0.4,'EdgeColor','none');
+                            view(2);
+                            xlabel('meters');    ylabel('meters')
+                            title({'Static Range-Azimuth Heatmap',strcat('Current Frame Number = ', num2str(frameCountGlobal))})
+                            
+                            subplot(122);
+                            surf(y_axis, x_axis, (mag_data_dynamic(:,:,frameCountGlobal)).^0.4,'EdgeColor','none');
+                            view(2);    
+                            xlabel('meters');    ylabel('meters')
+                            title('Dynamic HeatMap')
+                        end
+                        pause(0.1) 
 
      
                     end

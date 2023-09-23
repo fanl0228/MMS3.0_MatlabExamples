@@ -52,7 +52,7 @@
 %
 
 
-function [detection_results] = CFAR_RD_Processing(obj, input)
+function [detection_results] = datapath(obj, input)
 
 
 % non-coherent signal combination along the antenna array
@@ -70,7 +70,7 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
     Ind_obj = [];
     detection_results = {};
     if (N_obj_Rag>0)
-        [N_obj, Ind_obj] = CFAR_CASO_Doppler_overlap(obj, Ind_obj_Rag, input, sig_integrate);
+        [N_obj, Ind_obj, noise_obj_an] = CFAR_CASO_Doppler_overlap(obj, Ind_obj_Rag, input, sig_integrate);
         detection_results = [];
         
         % Use aggregate noise estimation from the first pass and apply
@@ -86,7 +86,7 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
         end
         
         for i_obj = 1:N_obj
-            xind = (Ind_obj(i_obj,1)-1) +1;
+            xind = (Ind_obj(i_obj,1)-1) -1;
             detection_results(i_obj).rangeInd = Ind_obj(i_obj, 1) - 1;  %range index
             detection_results(i_obj).range = (detection_results(i_obj).rangeInd) * obj.rangeBinSize;  %range estimation
             dopplerInd  = Ind_obj(i_obj, 2) - 1;  %Doppler index
@@ -98,8 +98,8 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
             detection_results(i_obj).doppler_corr = detection_results (i_obj).doppler;
             detection_results(i_obj).noise_var = noise_obj_agg(i_obj);       %noise variance
             detection_results(i_obj).bin_val  = reshape(input(xind, Ind_obj(i_obj,2),:),obj.numAntenna,1);  %2d FFT value for the 4 antennas
-            %detection_results(i_obj).estSNR  = 10*log10(sum(abs(detection_results (i_obj).bin_val).^2)/sum(detection_results (i_obj).noise_var));  %2d FFT value for the 4 antennas
-            detection_results(i_obj).estSNR  = (sum(abs(detection_results (i_obj).bin_val).^2)/sum(detection_results (i_obj).noise_var));  
+            detection_results(i_obj).estSNR   = 10*log10(sum(abs(detection_results (i_obj).bin_val).^2)/sum(detection_results (i_obj).noise_var));  %2d FFT value for the 4 antennas
+            %detection_results(i_obj).estSNR  =         (sum(abs(detection_results (i_obj).bin_val).^2)/sum(detection_results (i_obj).noise_var));  
             
             sig_bin = [];
             %only apply max velocity extention if it is enabled and distance is larger
@@ -177,7 +177,7 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
                 detection_results (i_obj).doppler_corr = (dopplerInd-obj.dopplerFFTSize/2)*obj.velocityBinSize;                
                 %both overlap antenna and FFT results are reported 
                 detection_results(i_obj).doppler_corr_overlap = (dopplerInd_overlap-obj.dopplerFFTSize/2)*obj.velocityBinSize;
-                detection_results(i_obj).doppler_corr_FFT = (dopplerInd_FFT-obj.dopplerFFTSize/2)*obj.velocityBinSize;
+                detection_results(i_obj).doppler_corr_FFT     = (dopplerInd_FFT-obj.dopplerFFTSize/2)*obj.velocityBinSize;
                 detection_results(i_obj).overlapTests = doppler_unwrap_integ_overlap;
                 detection_results(i_obj).overlapTestsVal = val_doppler_unwrap_integ_overlap;
             else
@@ -186,10 +186,16 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
                 
                 deltaPhi = 2*pi*(dopplerInd-obj.dopplerFFTSize/2)/( obj.TDM_MIMO_numTX*obj.dopplerFFTSize);
                 sig_bin_org = detection_results (i_obj).bin_val;
-                for i_TX = 1:obj.TDM_MIMO_numTX
+                
+                % for i_TX = 1:obj.TDM_MIMO_numTX
+                %     RX_ID = (i_TX-1)*obj.numRxAnt+1 : i_TX*obj.numRxAnt;
+                %     sig_bin(RX_ID,: )= sig_bin_org(RX_ID )* exp(-1j*(i_TX-1)*deltaPhi);
+                % end
+                for i_TX = 1:1
                     RX_ID = (i_TX-1)*obj.numRxAnt+1 : i_TX*obj.numRxAnt;
                     sig_bin(RX_ID,: )= sig_bin_org(RX_ID )* exp(-1j*(i_TX-1)*deltaPhi);
                 end
+                
                 detection_results(i_obj).bin_val = sig_bin;
                 detection_results(i_obj).doppler_corr_overlap = detection_results(i_obj).doppler_corr;
                 detection_results(i_obj).doppler_corr_FFT = detection_results(i_obj).doppler_corr;

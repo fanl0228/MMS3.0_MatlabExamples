@@ -72,7 +72,7 @@ scaleFactor         = [0.0625, 0.03125, 0.015625, 0.0078125, 0.00390625, 0.00195
 %% define TX/RX antennas used for virtual array analysis. It can be a subset of the antennas enabled in data capture phase
 %TxForMIMOProcess defines antenna TD used for TDM MIMO processing, can
 %be a sub set of TxToEnable; CANNOT be channels that not enabled in TxToEnable
-
+TxToEnable = [10];
 TxForMIMOProcess = TxToEnable;
 
 %TxForMIMOProcess = [1:9  ];
@@ -83,6 +83,7 @@ TxForMIMOProcess = TxToEnable;
 %end
 
 RxForMIMOProcess = TI_Cascade_RX_ID; %using all 16 RXs, user can also choose subset of RXs for MIMO data analysis
+
 %RxForMIMOProcess = [1:8];
 D_TX = TI_Cascade_TX_position_azi(TxToEnable); %TX azimuth antenna coordinates
 D_TX_ele = TI_Cascade_TX_position_ele(TxToEnable);%TX elevation antenna coordinates
@@ -108,13 +109,14 @@ for ii = 1:length(D_TX)
         ylim([-8 8])
     end
 end
+
 D(:,1) = RX_id_tot;
 D(:,2) = RX_id_tot_ele;
 
 
 %% derived parameters
-DopplerFFTSize = 2^(ceil(log2(nchirp_loops)));
-numChirpsPerFrame = nchirp_loops*numTxAnt;%nchirp_loops*numChirpsInLoop;
+DopplerFFTSize      = 2^(ceil(log2(nchirp_loops)));
+numChirpsPerFrame   = nchirp_loops*numTxAnt;%nchirp_loops*numChirpsInLoop;
 chirpRampTime       = numADCSample/adcSampleRate;
 chirpBandwidth      = chirpSlope * chirpRampTime; % Hz
 chirpInterval       = chirpRampEndTime + chirpIdleTime;
@@ -125,7 +127,7 @@ maxRange            = speedOfLight*adcSampleRate*chirpRampTime/(2*chirpBandwidth
 numSamplePerChirp   = round(chirpRampTime*adcSampleRate);
 rangeFFTSize        = 2^(ceil(log2(numSamplePerChirp)));
 numChirpsPerVirAnt  = nchirp_loops;
-numVirtualRxAnt     = length(TxToEnable) * length(RxForMIMOProcess) ;
+numVirtualRxAnt     = length(RxForMIMOProcess); % length(TxToEnable) * length(RxForMIMOProcess)
 rangeResolution     = speedOfLight/2/chirpBandwidth;
 rangeBinSize        = rangeResolution*numSamplePerChirp/rangeFFTSize;
 velocityResolution  = lambda / (2*nchirp_loops * chirpInterval*numTxAnt);
@@ -133,56 +135,56 @@ velocityBinSize     = velocityResolution*numChirpsPerVirAnt/DopplerFFTSize;
 
 
 %% simTopCascade parameters
-simTopCascade_inputDataSource          = 'bin'; % choose from 'mat','bin','gen'
-simTopCascade_enable      = 1;
-simTopCascade_outputDataSavingEnable   = 0;
-simTopCascade_outputDataFileName       = [];
-simTopCascade_totNumFrames = frameCount;
-simTopCascade_platform                 = platform;
+simTopCascade_inputDataSource           = 'bin'; % choose from 'mat','bin','gen'
+simTopCascade_enable                    = 1;
+simTopCascade_outputDataSavingEnable    = 0;
+simTopCascade_outputDataFileName        = [];
+simTopCascade_totNumFrames              = frameCount;
+simTopCascade_platform                  = platform;
 
 
 %% generate calibration matrix module parameters
-calibrationInterp              = 5;     %interpolation factor used for range FFT for frequency calibration, determined at calibration stage
-genCalibrationMatrixCascade_enable = 1;
-genCalibrationMatrixCascade_calibrateFileName = [];
-genCalibrationMatrixCascade_targetRange = 0;
-genCalibrationMatrixCascade_frameIdx = 1;  % always use the first frame to generate calibration matrix
-genCalibrationMatrixCascade_numSamplePerChirp = numSamplePerChirp;
-genCalibrationMatrixCascade_Sampling_Rate_sps = adcSampleRate;
-genCalibrationMatrixCascade_nchirp_loops = nchirp_loops;
-genCalibrationMatrixCascade_numChirpsPerFrame = numChirpsPerFrame;
-genCalibrationMatrixCascade_TxToEnable = TxToEnable;
-genCalibrationMatrixCascade_Slope_calib = chirpSlope;
-genCalibrationMatrixCascade_calibrationInterp = calibrationInterp;
-genCalibrationMatrixCascade_TI_Cascade_RX_ID = TI_Cascade_RX_ID;
-genCalibrationMatrixCascade_RxForMIMOProcess = RxForMIMOProcess;
-genCalibrationMatrixCascade_TxForMIMOProcess = TxToEnable;
-genCalibrationMatrixCascade_numRxToEnable = numRxToEnable;
-genCalibrationMatrixCascade_phaseCalibOnly = 0; % 1: only phase calibration; 0: phase and amplitude calibration
-genCalibrationMatrixCascade_adcCalibrationOn = 1; %1: adc data calibration on; 0 calibration off
-genCalibrationMatrixCascade_rangeResolution = rangeResolution;
-genCalibrationMatrixCascade_dataPlatform = dataPlatform;
-genCalibrationMatrixCascade_NumDevices = NumDevices; 
-genCalibrationMatrixCascade_binDataFile = [];
-genCalibrationMatrixCascade_RxOrder = TI_Cascade_RX_ID;
+calibrationInterp                                       = 5;     %interpolation factor used for range FFT for frequency calibration, determined at calibration stage
+genCalibrationMatrixCascade_enable                      = 1;
+genCalibrationMatrixCascade_calibrateFileName           = [];
+genCalibrationMatrixCascade_targetRange                 = 0;
+genCalibrationMatrixCascade_frameIdx                    = 1;  % always use the first frame to generate calibration matrix
+genCalibrationMatrixCascade_numSamplePerChirp           = numSamplePerChirp;
+genCalibrationMatrixCascade_Sampling_Rate_sps           = adcSampleRate;
+genCalibrationMatrixCascade_nchirp_loops                = nchirp_loops;
+genCalibrationMatrixCascade_numChirpsPerFrame           = numChirpsPerFrame;
+genCalibrationMatrixCascade_TxToEnable                  = TxToEnable;
+genCalibrationMatrixCascade_Slope_calib                 = chirpSlope;
+genCalibrationMatrixCascade_calibrationInterp           = calibrationInterp;
+genCalibrationMatrixCascade_TI_Cascade_RX_ID            = TI_Cascade_RX_ID;
+genCalibrationMatrixCascade_RxForMIMOProcess            = RxForMIMOProcess;
+genCalibrationMatrixCascade_TxForMIMOProcess            = TxToEnable;
+genCalibrationMatrixCascade_numRxToEnable               = numRxToEnable;
+genCalibrationMatrixCascade_phaseCalibOnly              = 0; % 1: only phase calibration; 0: phase and amplitude calibration
+genCalibrationMatrixCascade_adcCalibrationOn            = 1; %1: adc data calibration on; 0 calibration off
+genCalibrationMatrixCascade_rangeResolution             = rangeResolution;
+genCalibrationMatrixCascade_dataPlatform                = dataPlatform;
+genCalibrationMatrixCascade_NumDevices                  = NumDevices; 
+genCalibrationMatrixCascade_binDataFile                 = [];
+genCalibrationMatrixCascade_RxOrder                     = TI_Cascade_RX_ID;
 
 
 
 
 %% range FFT parameters
-rangeProcCascade_enable                = 1;
-rangeProcCascade_numAntenna            = numVirtualRxAnt;      % number of antennas
-rangeProcCascade_numAdcSamplePerChirp  = numSamplePerChirp;    % number of samples per chirp
-rangeProcCascade_rangeFFTSize          = rangeFFTSize;         % FFT size
-rangeProcCascade_dcOffsetCompEnable    = 1;
-rangeProcCascade_rangeWindowEnable     = 1;                    % flag to enable or disable windowing before range FFT
+rangeProcCascade_enable                     = 1;
+rangeProcCascade_numAntenna                 = numVirtualRxAnt;      % number of antennas
+rangeProcCascade_numAdcSamplePerChirp       = numSamplePerChirp;    % number of samples per chirp
+rangeProcCascade_rangeFFTSize               = rangeFFTSize;         % FFT size
+rangeProcCascade_dcOffsetCompEnable         = 1;
+rangeProcCascade_rangeWindowEnable          = 1;                    % flag to enable or disable windowing before range FFT
 % rangeProcCascade_rangeWindowCoeff      = [0.0800, 0.0894, 0.1173, 0.1624, 0.2231, 0.2967, 0.3802, 0.4703, 0.5633...
 %                                     0.6553, 0.7426, 0.8216, 0.8890 0.9422, 0.9789, 0.9976]; % range FFT window coefficients
 %windowCoeff = hann_local(numSamplePerChirp);
-windowCoeff = hanning(numSamplePerChirp);
-rangeProcCascade_rangeWindowCoeff      = windowCoeff(1:(numSamplePerChirp/2));
-rangeProcCascade_scaleFactorRange      = scaleFactor(log2(rangeFFTSize) - 3);
-rangeProcCascade_FFTOutScaleOn = 0; %1: apply scaleFactorRange; 0: scaling factor not applied
+windowCoeff                                 = hanning(numSamplePerChirp);
+rangeProcCascade_rangeWindowCoeff           = windowCoeff(1:(numSamplePerChirp/2));
+rangeProcCascade_scaleFactorRange           = scaleFactor(log2(rangeFFTSize) - 3);
+rangeProcCascade_FFTOutScaleOn              = 0; %1: apply scaleFactorRange; 0: scaling factor not applied
 
 %% Doppler FFT parameters
 DopplerProcClutterRemove_enable              = 1;
@@ -190,9 +192,9 @@ DopplerProcClutterRemove_numAntenna          = numVirtualRxAnt;      % number of
 DopplerProcClutterRemove_numDopplerLines     = rangeFFTSize;         % number of Doppler lines
 DopplerProcClutterRemove_dopplerFFTSize      = DopplerFFTSize;       % Doppler FFT size
 DopplerProcClutterRemove_numChirpsPerVirAnt  = numChirpsPerVirAnt;
-DopplerProcClutterRemove_dopplerWindowEnable = 0;                    % flag to enable or disable windowing before Doppler FFT
-windowCoeff = hanning(numChirpsPerVirAnt);
-DopplerProcClutterRemove_dopplerWindowCoeff = windowCoeff(1:(numChirpsPerVirAnt/2));
+DopplerProcClutterRemove_dopplerWindowEnable = 1;                    % flag to enable or disable windowing before Doppler FFT
+windowCoeff                                  = hanning(numChirpsPerVirAnt);
+DopplerProcClutterRemove_dopplerWindowCoeff  = windowCoeff(1:(numChirpsPerVirAnt/2));
 DopplerProcClutterRemove_scaleFactorDoppler  = scaleFactor(log2(DopplerFFTSize) - 3);
 DopplerProcClutterRemove_FFTOutScaleOn       = 0; %1: apply scaleFactorRange; 0: scaling factor not applied
 DopplerProcClutterRemove_clutterRemove       = 0;                        %1=enable clutter removal; 0=no
@@ -200,28 +202,28 @@ DopplerProcClutterRemove_clutterRemove       = 0;                        %1=enab
 
 %% detection parameters
 ind = find(D(:,2)==0);
-[val ID_unique] = unique(D(ind,1));
-antenna_azimuthonly = ind(ID_unique); %virtual channel ID only for unique azimuth ID
+[val ID_unique]                     = unique(D(ind,1));
+antenna_azimuthonly                 = ind(ID_unique); %virtual channel ID only for unique azimuth ID
 
-CFAR_CASO_enable             = 1;
-CFAR_CASO_detectMethod       = 1;                %(CASO-CFAR)dualpass rng/dop; only support one CFAR method
-CFAR_CASO_numAntenna         = numVirtualRxAnt; %number of antennas
-CFAR_CASO_refWinSize         = [8, 4];          % number of reference cells to estimate noise variance
-CFAR_CASO_guardWinSize       = [8, 0];           % number of gap cells to prevent leakage being detected as signal
-CFAR_CASO_K0                 = [5 3];       % Threshold scaling factor -- 6.3 corresponds to SNR of 8dB
-CFAR_CASO_maxEnable          = 0;                %1: detect only if it is the maximum within window; 0: otherwise
-CFAR_CASO_ratio_OS           = 0.65;             % percentage used to determine noise level used for detection
-CFAR_CASO_rangeBinSize    = rangeBinSize;
-CFAR_CASO_velocityBinSize  = velocityBinSize;
-CFAR_CASO_dopplerFFTSize     = DopplerFFTSize;   % Doppler FFT size
-CFAR_CASO_powerThre          = 0;                % if power of detected signal is less than this level, drop off this object.
-CFAR_CASO_discardCellLeft    = 10;                % Number of range bins to discard due to distortions around DC (positive frequencies)
-CFAR_CASO_discardCellRight   = 20;               % Number of range bins to discard due to distortions around DC (negative frequencies)
-CFAR_CASO_numRxAnt           = length(RxForMIMOProcess);
-CFAR_CASO_TDM_MIMO_numTX     = length(TxForMIMOProcess);
-CFAR_CASO_antenna_azimuthonly = antenna_azimuthonly; %virtual channel ID only for unique azimuth ID
-CFAR_CASO_minDisApplyVmaxExtend = 10; % meter, within this range, do not apply max velocity extension
-CFAR_CASO_applyVmaxExtend = 0;
+CFAR_CASO_enable                    = 1;
+CFAR_CASO_detectMethod              = 1;                %(CASO-CFAR)dualpass rng/dop; only support one CFAR method
+CFAR_CASO_numAntenna                = numVirtualRxAnt; %number of antennas
+CFAR_CASO_refWinSize                = [10, 4];          % number of reference cells to estimate noise variance
+CFAR_CASO_guardWinSize              = [10, 0];           % number of gap cells to prevent leakage being detected as signal
+CFAR_CASO_K0                        = [5, 2];            % Threshold scaling factor -- 6.3 corresponds to SNR of 8dB
+CFAR_CASO_maxEnable                 = 1;                %1: detect only if it is the maximum within window; 0: otherwise
+CFAR_CASO_ratio_OS                  = 0.65;             % percentage used to determine noise level used for detection
+CFAR_CASO_rangeBinSize              = rangeBinSize;
+CFAR_CASO_velocityBinSize           = velocityBinSize;
+CFAR_CASO_dopplerFFTSize            = DopplerFFTSize;   % Doppler FFT size
+CFAR_CASO_powerThre                 = 0;                % if power of detected signal is less than this level, drop off this object.
+CFAR_CASO_discardCellLeft           = 10;                % Number of range bins to discard due to distortions around DC (positive frequencies)
+CFAR_CASO_discardCellRight          = 10;               % Number of range bins to discard due to distortions around DC (negative frequencies)
+CFAR_CASO_numRxAnt                  = length(RxForMIMOProcess);
+CFAR_CASO_TDM_MIMO_numTX            = length(TxForMIMOProcess);  % modify for TXBF    TxForMIMOProcess = [10]
+CFAR_CASO_antenna_azimuthonly       = antenna_azimuthonly; %virtual channel ID only for unique azimuth ID
+CFAR_CASO_minDisApplyVmaxExtend     = 10; % meter, within this range, do not apply max velocity extension, 
+CFAR_CASO_applyVmaxExtend           = 0; % This function need to use overlap anntenna to do max velocity unwrap, TXBF can not use it.
 
 %find the overlap antenna ID that can be used for phase compensation
 TX_ID_MIMO = repmat(1:length(TxForMIMOProcess),length(RxForMIMOProcess),1);
@@ -273,20 +275,20 @@ end
 %         d_optimal = d_optimal_calib(5);
 % end
 
-d_optimal = 0.5 * centerFreq / TI_Cascade_Antenna_DesignFreq;
+d_optimal                                   = 0.5 * centerFreq / TI_Cascade_Antenna_DesignFreq;
 
-DOACascade_enable                = 1;
-DOACascade_D = D;
-DOACascade_DOAFFTSize = 256;
-DOACascade_numAntenna          = numVirtualRxAnt;
-DOACascade_antPos          = [0:numVirtualRxAnt-1];
-DOACascade_antDis              = d_optimal;              % in terms of lamda
-DOACascade_method              = 1;                % 1: 2D  muli-object beamforming, 2: 2D  muli-object beamforming and peak search after azi/ele FFT
-DOACascade_angles_DOA_az=[-80 80]; %field of view to run 2D DOA in azimuth
-DOACascade_angles_DOA_ele = [-20 20];%field of view to run 2D DOA in elevation
-DOACascade_gamma  = 10^(0.2/10);      % Used in peak detection
-DOACascade_sidelobeLevel_dB_azim = 1; % used to reject sidelobe in azimuth run 2D DOA
-DOACascade_sidelobeLevel_dB_elev = 0;% used to reject sidelobe in elevation run 2D DOA
-DOACascade_dopplerFFTSize      = DopplerFFTSize;
+DOACascade_enable                           = 1;
+DOACascade_D                                = D;
+DOACascade_DOAFFTSize                       = 256;
+DOACascade_numAntenna                       = numVirtualRxAnt;
+DOACascade_antPos                           = [0:numVirtualRxAnt-1];
+DOACascade_antDis                           = d_optimal;              % in terms of lamda
+DOACascade_method                           = 1;                % 1: 2D  muli-object beamforming, 2: 2D  muli-object beamforming and peak search after azi/ele FFT
+DOACascade_angles_DOA_az                    = [-60 60]; %field of view to run 2D DOA in azimuth
+DOACascade_angles_DOA_ele                   = [-20 20];%field of view to run 2D DOA in elevation
+DOACascade_gamma                            = 10^(0.2/10);      % Used in peak detection
+DOACascade_sidelobeLevel_dB_azim            = 1; % used to reject sidelobe in azimuth run 2D DOA
+DOACascade_sidelobeLevel_dB_elev            = 0; % used to reject sidelobe in elevation run 2D DOA
+DOACascade_dopplerFFTSize                   = DopplerFFTSize;
 
 
