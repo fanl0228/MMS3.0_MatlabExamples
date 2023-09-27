@@ -42,7 +42,7 @@ adcStartTimeConst = 6.000000e-06; %s
 chirpRampEndTime = 3.000000e-05; %s 
 framePeriodicty = 2.800000e-01; 
 NumDevices = 4; 
-frameCount = 1.000000e+01; %s 
+frameCount = 2.000000e+01; %s 
 numTxAnt = 12; 
 nchirp_loops = 252; 
 TxToEnable = [4   5   6   7   8   9  10  11  12];
@@ -91,7 +91,7 @@ scaleFactor         = [0.0625, 0.03125, 0.015625, 0.0078125, 0.00390625, 0.00195
 %% define TX/RX antennas used for virtual array analysis. It can be a subset of the antennas enabled in data capture phase
 %TxForMIMOProcess defines antenna TD used for TDM MIMO processing, can
 %be a sub set of TxToEnable; CANNOT be channels that not enabled in TxToEnable
-TxToEnable = [10];
+TxToEnable = [12];
 TxForMIMOProcess = TxToEnable;
 
 %TxForMIMOProcess = [1:9  ];
@@ -227,7 +227,7 @@ antenna_azimuthonly                 = ind(ID_unique); %virtual channel ID only f
 CFAR_CASO_enable                    = 1;
 CFAR_CASO_detectMethod              = 1;                %(CASO-CFAR)dualpass rng/dop; only support one CFAR method
 CFAR_CASO_numAntenna                = numVirtualRxAnt; %number of antennas
-CFAR_CASO_refWinSize                = [10, 4];          % number of reference cells to estimate noise variance
+CFAR_CASO_refWinSize                = [20, 5];          % number of reference cells to estimate noise variance
 CFAR_CASO_guardWinSize              = [10, 0];           % number of gap cells to prevent leakage being detected as signal
 CFAR_CASO_K0                        = [5, 2];            % Threshold scaling factor -- 6.3 corresponds to SNR of 8dB
 CFAR_CASO_maxEnable                 = 1;                %1: detect only if it is the maximum within window; 0: otherwise
@@ -302,7 +302,7 @@ DOACascade_DOAFFTSize                       = 256;
 DOACascade_numAntenna                       = numVirtualRxAnt;
 DOACascade_antPos                           = [0:numVirtualRxAnt-1];
 DOACascade_antDis                           = d_optimal;              % in terms of lamda
-DOACascade_method                           = 1;                % 1: 2D  muli-object beamforming, 2: 2D  muli-object beamforming and peak search after azi/ele FFT
+DOACascade_method                           = 3;                % 1: 2D  muli-object beamforming, 2: 2D  muli-object beamforming and peak search after azi/ele FFT
 DOACascade_angles_DOA_az                    = [-60 60]; %field of view to run 2D DOA in azimuth
 DOACascade_angles_DOA_ele                   = [-20 20];%field of view to run 2D DOA in elevation
 DOACascade_gamma                            = 10^(0.2/10);      % Used in peak detection
@@ -310,4 +310,5 @@ DOACascade_sidelobeLevel_dB_azim            = 1; % used to reject sidelobe in az
 DOACascade_sidelobeLevel_dB_elev            = 0; % used to reject sidelobe in elevation run 2D DOA
 DOACascade_dopplerFFTSize                   = DopplerFFTSize;
 
+DOACascade_D_RX                             = D_RX;
 

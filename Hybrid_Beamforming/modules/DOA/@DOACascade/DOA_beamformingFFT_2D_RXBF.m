@@ -1,40 +1,9 @@
-%  Copyright (C) 2018 Texas Instruments Incorporated - http://www.ti.com/ 
-%  
-%  
-%   Redistribution and use in source and binary forms, with or without 
-%   modification, are permitted provided that the following conditions 
-%   are met:
-%  
-%     Redistributions of source code must retain the above copyright 
-%     notice, this list of conditions and the following disclaimer.
-%  
-%     Redistributions in binary form must reproduce the above copyright
-%     notice, this list of conditions and the following disclaimer in the 
-%     documentation and/or other materials provided with the   
-%     distribution.
-%  
-%     Neither the name of Texas Instruments Incorporated nor the names of
-%     its contributors may be used to endorse or promote products derived
-%     from this software without specific prior written permission.
-%  
-%   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-%   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-%   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-%   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-%   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-%   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-%   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-%   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-%   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-%   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
-%   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-%  
-% 
 
-%DOA_beamformingFFT_2D.m
+%DOA_beamformingFFT_2D_RXBF.m
 %
-% DOA_beamformingFFT_2D function perform 2D angle estimation based on FFT beamforming, the azimuth peak selection
-%is done in 1D FFT domain, the elevation peak selection is done after 2D FFT
+%DOA_beamformingFFT_2D_RXBF function perform 2D angle estimation based on FFT beamforming, 
+% both azimuth/elevation peak selection is done in 2D FFT domain
+
 
 %input:
 %   obj: object instance
@@ -47,8 +16,7 @@
 %   angleObj_est: angle estimation results
 %   angle_sepc_2D_fft: angle 2D fft spectrum
 
-function [angleObj_est angle_sepc_2D_fft]= DOA_beamformingFFT_2D(obj, sig)
-
+function [angleObj_est, angle_sepc_2D_fft, range_beam_angle]= DOA_beamformingFFT_2D_RXBF(obj, sig, Txbeam_angle, DopplerFFTIn)
 
 %field of view to do beamforming
 angles_DOA_az = obj.angles_DOA_az;
@@ -57,12 +25,18 @@ angles_DOA_ele = obj.angles_DOA_ele;
 %distance unit in terms of wavelength
 d = obj.antDis;
 %2D matrix providing antenna coordinates
-D = obj.D;
-angleFFTSize = obj.DOAFFTSize;
+
+D_BF = obj.D(:,1);
+angleFFTSize = obj.DOAFFTSize; 
+DopplerFFTSize = obj.dopplerFFTSize;
 
 
+
+
+%%
 %FFT based implementation
 %first form a 2D matrix based on the antenna coordinates
+D = obj.D;
 D = D + 1;
 apertureLen_azim = max(D(:,1));
 apertureLen_elev = max(D(:,2));
@@ -91,8 +65,8 @@ wz_vec = wz_vec(1:end-1);
 %estimation
 spec_azim = abs(angle_sepc_1D_fft(:,1));
 obj.sidelobeLevel_dB = obj.sidelobeLevel_dB_azim;
-[peakVal_azim, peakLoc_azim] = DOA_BF_PeakDet_loc(obj, spec_azim);
 
+[peakVal_azim, peakLoc_azim] = DOA_BF_PeakDet_loc(obj, spec_azim);
 if apertureLen_elev ==1
     %azimuth array only, no elevation antennas
     obj_cnt = 1;
@@ -149,5 +123,39 @@ else
         end        
     end    
     %hold off
-    
+
 end
+
+
+%%
+%decide non-zero doppler bins to be used for dynamic range-azimuth heatmap
+ratio = 0.5;
+DopplerPower = sum(mean((abs(DopplerFFTIn(:,:,:))),3),1);
+DopplerPower_noDC = DopplerPower([1: DopplerFFTSize/2-1 DopplerFFTSize/2+3:end]);
+[peakVal peakInd] = max(DopplerPower_noDC);
+threshold = peakVal*ratio;
+indSel = find(DopplerPower_noDC >threshold);
+for ii = 1:length(indSel)
+    if indSel(ii) > DopplerFFTSize/2-1
+        indSel(ii) = indSel(ii) + 3;
+    end
+end
+
+angle_range_dynamic = squeeze(sum(DopplerFFTIn(:, indSel, :), 2) );
+wx = sind(Txbeam_angle);
+a1_az = exp(1j*2*pi*d*(D_BF*wx));
+
+for irange = 1:size(angle_range_dynamic,1)
+    RX_data = squeeze(angle_range_dynamic(irange, :));
+    range_beam_angle(irange) = a1_az'*(RX_data'*RX_data)*a1_az;
+end
+
+
+% figure(333)
+% plot(10*log10(abs(Range_BeamAngle).^2))
+% pause(0.01)
+
+
+
+
+

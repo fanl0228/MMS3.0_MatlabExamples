@@ -110,10 +110,10 @@ for k=1:M_samp
         
         maxInCell = max(vec(cellInd));
         if maxEnable==1
-            %detect only if it is the maximum within window
-            condition = ((vec(j)>K0*cellave1)) && ((vec(j)>maxInCell));
+            % detect only if it is the maximum within window
+            condition = ((vec(j)> K0*cellave1 )) && ((vec(j) > maxInCell));
         else
-            condition = vec(j)>K0*cellave1;
+            condition = vec(j) > K0*cellave1;
         end
         
         if condition==1

@@ -43,20 +43,21 @@
 classdef DOACascade < Module
     %% properties
     properties (Access = public)       
-        numAntenna = 0
+        numAntenna = 0;
         antPos = [];
-        antDis = 0
-        method = 0
-        standardWidth_gamma = 0    
-        dopplerFFTSize = 0     
-        angles_DOA_az = []
-        angles_DOA_ele = []
+        antDis = 0;
+        method = 0;
+        standardWidth_gamma = 0;    
+        dopplerFFTSize = 0;  
+        angles_DOA_az = [];
+        angles_DOA_ele = [];
         gamma = 0;
-        sidelobeLevel_dB_azim = 0
-        sidelobeLevel_dB_elev = 0
+        sidelobeLevel_dB_azim = 0;
+        sidelobeLevel_dB_elev = 0;
         sidelobeLevel_dB = 0;
-        D = []
-        DOAFFTSize = 0        
+        D = [];
+        DOAFFTSize = 0;
+        D_RX = [];
         
     end
     
@@ -79,7 +80,8 @@ classdef DOACascade < Module
             obj.sidelobeLevel_dB_azim = getParameter(obj, 'sidelobeLevel_dB_azim');            
             obj.sidelobeLevel_dB_elev = getParameter(obj, 'sidelobeLevel_dB_elev');              
             obj.DOAFFTSize = getParameter(obj, 'DOAFFTSize');              
-            obj.D = getParameter(obj, 'D');   
+            obj.D = getParameter(obj, 'D');  
+            obj.D_RX = getParameter(obj, 'D_RX');
              
            
             try                
@@ -92,55 +94,54 @@ classdef DOACascade < Module
         end
                 
         %% datapath function
-        function out = datapath(obj, detected_obj)
+        function out = datapath(obj, detected_obj, Txbeam_angle, DopplerFFTIn)
             numObj = length(detected_obj);
             out = detected_obj;
             numAoAObjCnt = 0;
             % extended detection_obj to include the angles information
             for i_obj = 1:numObj
                 current_obj = detected_obj(i_obj);
-                estSNR = 10*log10(sum(abs(current_obj.bin_val).^2)/sum(current_obj.noise_var));
+                % Doppler FFT has calculate the SNR
+                % angle_estSNR = 10*log10(sum(abs(current_obj.bin_val).^2)/sum(current_obj.noise_var));
                 X = current_obj.bin_val; 
 
                 % calculate the covariance of 16Rx
-                R = X*X';
+                % R = X*X';
 
                 switch obj.method
                     
                     case 1
                         %2D beamforming angle estimation, azimuth is estimated based on 1D FFT output                        
-                        [DOA_angles angle_sepc_2D_fft ]= DOA_beamformingFFT_2D(obj, X);
+                        [DOA_angles, angle_sepc_2D_fft]= DOA_beamformingFFT_2D(obj, X);
                         if (numAoAObjCnt == 0)
                             out = [];
                         end
                         
-                        for i_obj = 1:size(DOA_angles,2)
+                        for ii_obj = 1:size(DOA_angles,2)
                             numAoAObjCnt = numAoAObjCnt+1;
                             out(numAoAObjCnt).rangeInd = current_obj.rangeInd;
                             out(numAoAObjCnt).dopplerInd = current_obj.dopplerInd;
                             out(numAoAObjCnt).range = current_obj.range;
                             out(numAoAObjCnt).doppler_corr = current_obj.doppler_corr;
                             out(numAoAObjCnt).dopplerInd_org = current_obj.dopplerInd_org;
-
                             out(numAoAObjCnt).noise_var = current_obj.noise_var;
-                            out(numAoAObjCnt).bin_val = current_obj.bin_val;
                             out(numAoAObjCnt).estSNR = current_obj.estSNR;
+                            out(numAoAObjCnt).bin_val = current_obj.bin_val; 
                             out(numAoAObjCnt).doppler_corr_overlap = current_obj.doppler_corr_overlap;
                             out(numAoAObjCnt).doppler_corr_FFT = current_obj.doppler_corr_FFT;
                             
-                            out(numAoAObjCnt).angles = DOA_angles(:,i_obj);
-                            out(numAoAObjCnt).spectrum = angle_sepc_2D_fft;
-                           
-                            
+                            out(numAoAObjCnt).angles = DOA_angles(:, ii_obj);
+                            out(numAoAObjCnt).spectrum = angle_sepc_2D_fft; 
                         end
+                    
                     case 2
                         %2D beamforming, angle estimated after 2D FFT jointly
-                        [DOA_angles angle_sepc_2D_fft ]= DOA_beamformingFFT_2D_joint(obj, X);
+                        [DOA_angles, angle_sepc_2D_fft ]= DOA_beamformingFFT_2D_joint(obj, X);
                         if (numAoAObjCnt == 0)
                             out = [];
                         end
                         
-                         for i_obj = 1:size(DOA_angles,2)
+                         for ii_obj = 1:size(DOA_angles,2)
                             numAoAObjCnt = numAoAObjCnt+1;
                             out(numAoAObjCnt).rangeInd = current_obj.rangeInd;
                             out(numAoAObjCnt).dopplerInd = current_obj.dopplerInd;
@@ -154,12 +155,39 @@ classdef DOACascade < Module
                             out(numAoAObjCnt).doppler_corr_overlap = current_obj.doppler_corr_overlap;
                             out(numAoAObjCnt).doppler_corr_FFT = current_obj.doppler_corr_FFT;
                             
-                            out(numAoAObjCnt).angles = DOA_angles(:,i_obj);
+                            out(numAoAObjCnt).angles = DOA_angles(:,ii_obj);
                             out(numAoAObjCnt).spectrum = angle_sepc_2D_fft;
-                           
-                            
                         end
-                        
+                    
+                    case 3
+                        % Rx beamforming, angle estimated after 2D FFT
+                        [DOA_angles, angle_sepc_2D_fft, range_beam_angle]= DOA_beamformingFFT_2D_RXBF(obj, X, Txbeam_angle, DopplerFFTIn);
+                        if (numAoAObjCnt == 0)
+                            out = [];
+                        end
+                        for ii_obj = 1:size(DOA_angles,2)
+                            numAoAObjCnt = numAoAObjCnt+1;
+                            out(numAoAObjCnt).rangeInd = current_obj.rangeInd;
+                            out(numAoAObjCnt).dopplerInd = current_obj.dopplerInd;
+                            out(numAoAObjCnt).range = current_obj.range;
+                            out(numAoAObjCnt).doppler_corr = current_obj.doppler_corr;
+                            out(numAoAObjCnt).dopplerInd_org = current_obj.dopplerInd_org;
+
+                            out(numAoAObjCnt).noise_var = current_obj.noise_var;
+                            out(numAoAObjCnt).bin_val = current_obj.bin_val;
+                            out(numAoAObjCnt).estSNR = current_obj.estSNR;
+                            out(numAoAObjCnt).doppler_corr_overlap = current_obj.doppler_corr_overlap;
+                            out(numAoAObjCnt).doppler_corr_FFT = current_obj.doppler_corr_FFT;
+                            
+
+                            out(numAoAObjCnt).angles = DOA_angles(:,ii_obj);
+                            out(numAoAObjCnt).spectrum = angle_sepc_2D_fft;
+                            out(numAoAObjCnt).range_beam_spectrum = range_beam_angle;
+                        end
+
+
+
+                
                     otherwise
                         error('Not specified DOA method')
                         

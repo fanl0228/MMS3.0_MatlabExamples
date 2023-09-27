@@ -55,7 +55,7 @@
 
 
 
-function  [mag_data_static mag_data_dynamic y_axis x_axis] = plot_range_azimuth_2D(range_resolution, ...
+function  [mag_data_static, mag_data_dynamic, y_axis, x_axis] = plot_range_azimuth_2D(range_resolution, ...
                                                                                     radar_data_pre_3dfft, ...
                                                                                     TDM_MIMO_numTX, ...
                                                                                     numRxAnt,...
@@ -151,7 +151,7 @@ if PLOT_ON
             surf(y_axis, x_axis, abs(mag_data_dynamic),'EdgeColor','none');
         end
     end
-    
+    colormap(gca,"jet");
     view(2);
     xlabel('meters')
     ylabel('meters')

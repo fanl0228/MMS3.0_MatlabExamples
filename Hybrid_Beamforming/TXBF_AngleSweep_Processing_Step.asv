@@ -50,6 +50,7 @@ pro_path = getenv('CASCADE_SIGNAL_PROCESSING_CHAIN_MIMO');
 input_path = strcat(pro_path,'\utils\cascade_json_parser\');
 dataPlatform = 'TDA2'
 
+
 % parameter file name for the test
 pathGenParaFile = [input_path,'generateClibrationMatrix_param.m'];
 % important to clear the same.m file, since Matlab does not clear cache
@@ -74,11 +75,10 @@ targetRange = 2.1;  % estimated corner-reflector target range (in meters)
 % matrix with dimensions [devices, number of TX, number of phase shift offsets] 
 % with the phase values for the detected range-bin peak
 % folder holding all of the datasets
-dataFolder_Path = 'I:\20230918_EXP\TXBF_AngleSweep_Vib_Range2m_Angle+45_Sweep121\'; 
-dataFolder_Skip = 10;
+dataFolder_Path = 'I:\20230918_EXP\TXBF_AngleSweep_Vib_Range4m_Angle+14.5_Sweep121\'; 
 dataFolder = dir(dataFolder_Path);
 
-UsedFrame_Skip = 5;
+%UsedFrame_Skip = 3; 
 
 % find the first folder of cal data
 for folderIdx = 1:length(dataFolder)
@@ -126,12 +126,17 @@ DOAObj                      = DOACascade('pfile', pathGenParaFile);
 % get system level variables
 platform                    = simTopObj.platform;
 numValidFrames              = simTopObj.totNumFrames;
-cnt                         = 1;
 frameCountGlobal            = 0;
+UsedFrames                  = 2;
+if (UsedFrames > numValidFrames)
+    UsedFrames              = numValidFrames;
+end
+dataFolder_Skip             = 1;
+
 
 % 变量获取  
 numTheta = ceil((length(dataFolder)-2)/dataFolder_Skip);
-numFrames = ceil(numValidFrames/UsedFrame_Skip);
+numFrames = UsedFrames; % ceil(numValidFrames/UsedFrame_Skip);
 numSamples = genCalibrationMatrixObj.numSamplePerChirp;
 numchirps = genCalibrationMatrixObj.nchirp_loops;
 DopplerFFTSize = 2^(ceil(log2(numchirps)));
@@ -142,6 +147,11 @@ gBeam_RangeDoppler_Profile = zeros(numTheta, numFrames, numSamples, DopplerFFTSi
 
 gBeams_Cube_Angle = zeros(numTheta, numFrames*numchirps, numRx);
 
+
+% 定义每一帧数据所需变量
+% detection_results_all_beams = {};
+gBeam_frame_obj_rangeBins= [];
+gBeam_dynamic_range_beam_spectrum = [];
 
 
 % loop through all beam steering angles
@@ -173,12 +183,18 @@ for idxTheta = 1:ceil((length(dataFolder)-2)/dataFolder_Skip)
         genCalibrationMatrixObj.binDataFile = fileNameStruct;
        
     end
+    
+    % 定义每一帧数据所需变量
+    detection_results_all_frames = {};
+    cnt = 1;
+    gPhase_obj_validFrameNum = 0;
 
     % 读取每一帧数据
-    for frameId = 1:ceil(numValidFrames/UsedFrame_Skip)
+    for frameId = 1:UsedFrames
         % use second frame for calibration 
         genCalibrationMatrixObj.frameIdx = frameId; 
         frameCountGlobal = frameCountGlobal+1;
+        
 
         % force cal object to single TX phase/frame (numChirpPerLoop <-> numTXPhases)
         %genCalibrationMatrixObj.nchirp_loops = 1;
@@ -186,9 +202,9 @@ for idxTheta = 1:ceil((length(dataFolder)-2)/dataFolder_Skip)
         
         % read in .bin files， rawData = [samples, chirps, Rx]
         rawData = cascade_Read_rawData(genCalibrationMatrixObj);
-        if mod(frameId, 10)==1
-            fprintf('Processing %3d frame...\n', frameId)
-        end
+        % if mod(frameId, 10)==1
+        %     fprintf('Processing %3d frame...\n', frameId)
+        % end
         
         %% -----------------Range Doppler FFT------------------------------
         %perform 2D FFT
@@ -219,11 +235,11 @@ for idxTheta = 1:ceil((length(dataFolder)-2)/dataFolder_Skip)
             pause(0.01)
         end
         
-        % CFAR Detection
         sig_integrate = 10*log10(sum((abs(DopplerFFTOut)).^2, 3) + 1);
         
+        % CFAR Detection
         detection_results = datapath(CFAR_DetectionObj, DopplerFFTOut);
-        detection_results_all{cnt} =  detection_results;
+        % detection_results_all_frames{cnt} =  detection_results;  % replaced by angleEst 
 
         detect_all_points = [];
         for iobj = 1:length(detection_results)
@@ -232,172 +248,246 @@ for idxTheta = 1:ceil((length(dataFolder)-2)/dataFolder_Skip)
             detect_all_points(iobj, 4)=detection_results(iobj).estSNR;
         end
 
-        if PLOT_ON
-            figure(3);
-            set(gcf,'units','normalized','outerposition',[0.1 0.1 0.8 0.8])                
-            subplot(2,3,1)               
-            plot((1:size(sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, sig_integrate(:,size(sig_integrate,2)/2+1),'g','LineWidth',4);
-            hold on; grid on
-            for ii=1:size(sig_integrate,2)
-                plot((1:size(sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, sig_integrate(:,ii));
-                hold on; grid on
-                if ~isempty(detection_results)
-                    ind = find(detect_all_points(:,2)==ii);
-                    if (~isempty(ind))
-                        rangeInd = detect_all_points(ind,1);
-                        plot(rangeInd*CFAR_DetectionObj.rangeBinSize, sig_integrate(rangeInd,ii), ...
-                                'o','LineWidth',2,...
-                                'MarkerEdgeColor','k',...
-                                'MarkerFaceColor',[.49 1 .63],...
-                                'MarkerSize',10);
-                    end
-                end
-            end
-            xlabel('Range(m)');
-            ylabel('Receive Power (dB)')
-            title(['Range Profile(zero Doppler - thick green line): frameID ' num2str(frameId)]);
-            hold off;
+       
 
-
-            subplot(2,3,2);
-            %subplot_tight(2,2,2,0.1)
-            fig2 = pcolor((sig_integrate));
-            fig2.FaceColor = 'interp';
-            fig2.LineStyle="none";
-            c = colorbar;
-            c.Label.String = 'Relative Power(dB)';
-
-            [RD_SNR_max_val, RD_SNR_max_idx]= max(detect_all_points(:, 4));
-            title({' Range/Velocity Plot', ...
-                    strcat('obj1 SNR=', num2str(detection_results(1).estSNR)) ...
-                    strcat(['SNR_{max}(dB)' num2str(RD_SNR_max_val) ...
-                            ' Range(m)=' num2str(detect_all_points(RD_SNR_max_idx, 1)*CFAR_DetectionObj.rangeBinSize)] )  ...
-                    });
-            pause(0.01)
-        end
-
-
-        %% Range - angle
+        %% Range - angle, point cloud generation.
         angles_all_points = [];
         xyz = [];
         if ~isempty(detection_results)
             % DOA, the results include detection results + angle estimation results.
             % access data with angleEst{frame}(objectIdx).fieldName
-            angleEst = datapath(DOAObj, detection_results);
-
-            if length(angleEst) > 0
+            Txbeam_angle = (idxTheta-1)*dataFolder_Skip - floor((length(dataFolder)-2)/2);
+            angleEst = datapath(DOAObj, detection_results, Txbeam_angle, DopplerFFTOut);
+             
+            % Visualization
+            if PLOT_ON
+                figure(3);
+                set(gcf,'units','normalized','outerposition',[0.1 0.1 0.8 0.8])                
                 
-                for iobj = 1:length(angleEst)
-                    angles_all_points (iobj,1:2)=angleEst(iobj).angles(1:2);
-                    angles_all_points (iobj,3)=angleEst(iobj).estSNR;
-                    angles_all_points (iobj,4)=angleEst(iobj).rangeInd;
-                    angles_all_points (iobj,5)=angleEst(iobj).doppler_corr;
-                    angles_all_points (iobj,6)=angleEst(iobj).range;
-                    %switch left and right, the azimuth angle is flipped
-                    xyz(iobj,1) = angles_all_points(iobj,6) * sind( angles_all_points(iobj,1) * -1 ) * cosd( angles_all_points(iobj,2) );
-                    xyz(iobj,2) = angles_all_points(iobj,6) * cosd( angles_all_points(iobj,1) * -1 ) * cosd( angles_all_points(iobj,2) );
-                    %switch upside and down, the elevation angle is flipped
-                    xyz(iobj,3) = angles_all_points(iobj,6) * sind(angles_all_points(iobj,2) * -1);
-                    xyz(iobj,4) = angleEst(iobj).doppler_corr;
-                    xyz(iobj,9) = angleEst(iobj).dopplerInd_org;
-                    xyz(iobj,5) = angleEst(iobj).range;
-                    xyz(iobj,6) = angleEst(iobj).estSNR;
-                    xyz(iobj,7) = angleEst(iobj).doppler_corr_overlap;
-                    xyz(iobj,8) = angleEst(iobj).doppler_corr_FFT; 
+                subplot(2,3,1)               
+                plot((1:size(sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, sig_integrate(:,size(sig_integrate,2)/2+1),'g','LineWidth',4);
+                hold on; grid on;
+                for ii=1:size(sig_integrate,2)
+                    
+                    if ~isempty(detection_results)
+                        ind = find(detect_all_points(:,2) == ii);
+                        if (~isempty(ind))
+                            plot((1:size(sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, sig_integrate(:, ii));
+                            hold on; grid on;
+    
+                            rangeInd = detect_all_points(ind,1);
+                            plot(rangeInd*CFAR_DetectionObj.rangeBinSize, sig_integrate(rangeInd, ii), ...
+                                    'o','LineWidth',2,...
+                                    'MarkerEdgeColor','k',...
+                                    'MarkerFaceColor',[.49 1 .63],...
+                                    'MarkerSize',10);
+                        end
+                    end
+                end
+                xlabel('Range(m)');
+                ylabel('Receive Power (dB)')
+                title(['Range Profile(zero Doppler - thick green line): frameID ' num2str(frameId)]);
+                hold off;
+   
+                subplot(2,3,2);
+                %subplot_tight(2,2,2,0.1)
+                sig_integrate_noDC = sig_integrate(:, [1:size(sig_integrate,2)/2-1 size(sig_integrate,2)/2+3:end]);
+                % [Y,X]=meshgrid(1:1:size(sig_integrate_noDC,1), -size(sig_integrate_noDC,2)/2+1:1:size(sig_integrate_noDC,2)/2);
+                % Y = Y * CFAR_DetectionObj.rangeBinSize;
+                % X = X * CFAR_DetectionObj.velocityBinSize;
+                fig2 = pcolor(sig_integrate_noDC);
+                fig2.FaceColor = 'interp';
+                fig2.LineStyle="none";
+                colormap(gca,"jet");
+                c = colorbar;
+                c.Label.String = 'Relative Power(dB)';
+    
+                [RD_SNR_max_val, RD_SNR_max_idx]= max(detect_all_points(:, 4));
+                title({' Range/Velocity Plot No-DC', ...
+                        strcat('obj1 SNR=', num2str(detection_results(1).estSNR)) ...
+                        strcat(['SNR_{max}(dB)' num2str(RD_SNR_max_val) ...
+                                ' Range(m)=' num2str(detect_all_points(RD_SNR_max_idx, 1)*CFAR_DetectionObj.rangeBinSize)] )  ...
+                        });
+                pause(0.01)
+            
+            end
+
+            if ~isempty(angleEst) 
+                if(1) % % Filting using the doppler and estSNR
+                    %% 去掉doppler_corr为0的目标,并且SNR取 top10
+                    idxs1 = find([angleEst.doppler_corr]);
+                    [~, idxs2] = sort([angleEst.estSNR], "descend");
+                    if (length(idxs2) > 10)
+                        SNR_TOPN = 10;
+                    else
+                        SNR_TOPN = length(idxs2);
+                    end
+                    idxs3 = intersect(idxs1, idxs2(1:SNR_TOPN));
+                    
+                    ;
+                    
+                    % calculate target azimuth
+                    [val, idx] = max( 10*log10( abs( angleEst(1, iobj).range_beam_spectrum ) ) );
+                    target_angle = idx * dataFolder_Skip - ceil(size(spectrogram_AOD, 1)/2);
+
+            
+                    % 计算target信噪比，从中取SNR 前top N个点作为基础点。 angleEst
+                    for iobj = 1:length(idxs3)
+                        out_frame(1, iobj).rangeInd                    = angleEst(1, iobj).rangeInd;
+                        out_frame(1, iobj).dopplerInd                  = angleEst(1, iobj).dopplerInd;
+                        out_frame(1, iobj).range                       = angleEst(1, iobj).range;
+                        out_frame(1, iobj).doppler_corr                = angleEst(1, iobj).doppler_corr;
+                        out_frame(1, iobj).dopplerInd_org              = angleEst(1, iobj).dopplerInd_org;
+                        out_frame(1, iobj).noise_var                   = angleEst(1, iobj).noise_var;
+                        out_frame(1, iobj).bin_val                     = angleEst(1, iobj).bin_val;
+                        out_frame(1, iobj).estSNR                      = angleEst(1, iobj).estSNR;
+                        out_frame(1, iobj).doppler_corr_overlap        = angleEst(1, iobj).doppler_corr_overlap;
+                        out_frame(1, iobj).doppler_corr_FFT            = angleEst(1, iobj).doppler_corr_FFT;
+                        out_frame(1, iobj).angles                      = angleEst(1, iobj).angles;
+                        out_frame(1, iobj).spectrum                    = angleEst(1, iobj).spectrum;
+                        out_frame(1, iobj).range_beam_spectrum         = angleEst(1, iobj).range_beam_spectrum;
+                    end
+                    detection_results_all_frames{cnt} = out_frame;
+                else
+                    out_frame = angleEst;
+                    detection_results_all_frames{cnt} = angleEst;
                 end
 
-                angles_all_all{cnt} = angles_all_points;
-                xyz_all{cnt}  = xyz;
-                maxRangeShow = CFAR_DetectionObj.rangeBinSize * rangeFFTObj.rangeFFTSize;
-                %tic
-                
-                if PLOT_ON
-                    moveID = find(abs(xyz(:,4))>=0);
-                    subplot(2,3,3);                        
-                    
-                    if cnt==1
-                        scatter3(xyz(moveID,1),xyz(moveID,2),xyz(moveID,3),45,(xyz(moveID,4)),'filled');
-                    else
-                        yz = [xyz_all{cnt}; xyz_all{cnt-1}];
-                        scatter3(xyz(moveID,1),xyz(moveID,2),xyz(moveID,3),45,(xyz(moveID,4)),'filled');
-                    end
-                    
-                    c = colorbar;
-                    c.Label.String = 'velocity (m/s)';                        
-                    grid on;
-                    
-                    xlim([-20 20])
-                    ylim([1 maxRangeShow])
-                    %zlim([-4 4])
-                    zlim([-5 5])
-                    xlabel('X (m)')
-                    ylabel('y (m)')
-                    zlabel('Z (m)')                        
-                    
-                    view(2)                        
-                    title(' 3D point cloud');
-                    
-                    % plot range and azimuth heatmap
-                    subplot(2,3,4)
-                    % STATIC_ONLY: 1 = plot heatmap for zero-Doppler; 0 = plot heatmap for nonzero-Doppler
-                    STATIC_ONLY = 0; 
-                    minRangeBinKeep = 2;
-                    rightRangeBinDiscard =  20;
-                    [mag_data_static(:,:,frameCountGlobal) ...
-                     mag_data_dynamic(:,:,frameCountGlobal) ...
-                     y_axis x_axis] = plot_range_azimuth_2D(CFAR_DetectionObj.rangeBinSize, ...
-                                                            DopplerFFTOut,...
-                                                            length(genCalibrationMatrixObj.TxForMIMOProcess), ...
-                                                            length(genCalibrationMatrixObj.RxForMIMOProcess), ...
-                                                            CFAR_DetectionObj.antenna_azimuthonly, ...
-                                                            LOG_ON, ...
-                                                            STATIC_ONLY, ...
-                                                            PLOT_ON, ...
-                                                            minRangeBinKeep, ...
-                                                            rightRangeBinDiscard);
-                    title('range/azimuth heat map static objects')
+                % [Beam, frame, objs_range_bin]
+                obj_rangebin= [detection_results_all_frames{cnt}.rangeInd];
+                gBeam_frame_obj_rangeBins(idxTheta, frameId, 1:length(obj_rangebin)) = obj_rangebin; 
+                gBeam_frame_obj_estSNR(idxTheta, frameId, 1:length(obj_rangebin))  = detection_results_all_frames{cnt}.estSNR;
 
-                    if (DISPLAY_RANGE_AZIMUTH_DYNAMIC_HEATMAP)                   
-                        subplot(2,3,5);
-                        surf(y_axis, x_axis, (mag_data_static(:,:,frameCountGlobal)).^0.4,'EdgeColor','none');
-                        view(2);
-                        xlabel('meters');    ylabel('meters')
-                        title({'Static Range-Azimuth Heatmap',strcat('Current Total Frame Number = ', num2str(frameCountGlobal))})
-                        
-                        subplot(2,3,6);
-                        surf(y_axis, x_axis, (mag_data_dynamic(:,:,frameCountGlobal)).^0.4,'EdgeColor','none');
-                        view(2);    
-                        xlabel('meters');    ylabel('meters')
-                        title({'Dynamic HeatMap', strcat('curent Sweep angle= ',num2str(idxTheta*dataFolder_Skip-floor((length(dataFolder)-2)/2)))})
-                        
-                    end
-                    pause(0.1) 
+                gBeam_dynamic_range_beam_spectrum(idxTheta, frameId, :)  = detection_results_all_frames{cnt}.range_beam_spectrum;
+                
+                gPhase_obj_validFrameNum = gPhase_obj_validFrameNum + 1;
 
-                end % PLOT_ON
+
+    
+                % plot 3D point cloud
+                if length(out_frame) > 0
+                    for iobj = 1:length(out_frame)
+                        angles_all_points(iobj,1:2)=out_frame(iobj).angles(1:2);
+                        angles_all_points(iobj,3)=out_frame(iobj).estSNR;
+                        angles_all_points(iobj,4)=out_frame(iobj).rangeInd;
+                        angles_all_points(iobj,5)=out_frame(iobj).doppler_corr;
+                        angles_all_points(iobj,6)=out_frame(iobj).range;
+                        %switch left and right, the azimuth angle is flipped
+                        xyz(iobj,1) = angles_all_points(iobj,6) * sind( angles_all_points(iobj,1) * -1 ) * cosd( angles_all_points(iobj,2) );
+                        xyz(iobj,2) = angles_all_points(iobj,6) * cosd( angles_all_points(iobj,1) * -1 ) * cosd( angles_all_points(iobj,2) );
+                        %switch upside and down, the elevation angle is flipped
+                        xyz(iobj,3) = angles_all_points(iobj,6) * sind(angles_all_points(iobj,2) * -1);
+                        xyz(iobj,4) = out_frame(iobj).doppler_corr;
+                        xyz(iobj,9) = out_frame(iobj).dopplerInd_org;
+                        xyz(iobj,5) = out_frame(iobj).range;
+                        xyz(iobj,6) = out_frame(iobj).estSNR;
+                        xyz(iobj,7) = out_frame(iobj).doppler_corr_overlap;
+                        xyz(iobj,8) = out_frame(iobj).doppler_corr_FFT; 
+                    end
+
+                    angles_all_all{cnt} = angles_all_points;
+                    xyz_all{cnt}  = xyz;
+                    maxRangeShow = CFAR_DetectionObj.rangeBinSize * rangeFFTObj.rangeFFTSize;
+                    %tic
                     
-                
-            end % if length(angleEst) > 0
-                
+                    if PLOT_ON
+                        moveID = find(abs(xyz(:,4))>=0);
+                        subplot(2,3,3);                        
+                        
+                        if cnt==1
+                            scatter3(xyz(moveID,1),xyz(moveID,2),xyz(moveID,3),45,(xyz(moveID,4)), 'filled');
+                            
+                        else
+                            yz = [xyz_all{cnt}; xyz_all{cnt-1}];
+                            scatter3(xyz(moveID,1),xyz(moveID,2),xyz(moveID,3),45,(xyz(moveID,4)),'filled');
+                        end
+                        colormap(gca,"jet");
+                        c = colorbar;
+                        c.Label.String = 'velocity (m/s)';                        
+                        grid on;
+                        
+                        xlim([-20 20])
+                        ylim([1 maxRangeShow])
+                        %zlim([-4 4])
+                        zlim([-5 5])
+                        xlabel('X (m)')
+                        ylabel('y (m)')
+                        zlabel('Z (m)')                        
+                        
+                        view(2)                        
+                        title(' 3D point cloud');
+                        
+                        % plot range and azimuth heatmap
+                        subplot(2,3,4)
+                        % STATIC_ONLY: 1 = plot heatmap for zero-Doppler; 0 = plot heatmap for nonzero-Doppler
+                        STATIC_ONLY = 1; 
+                        minRangeBinKeep = 2;
+                        rightRangeBinDiscard =  20;
+                        [mag_data_static(:,:,frameCountGlobal), ...
+                        mag_data_dynamic(:,:,frameCountGlobal), ...
+                        y_axis, x_axis] = plot_range_azimuth_2D(CFAR_DetectionObj.rangeBinSize, ...
+                                                                DopplerFFTOut,...
+                                                                length(genCalibrationMatrixObj.TxForMIMOProcess), ...
+                                                                length(genCalibrationMatrixObj.RxForMIMOProcess), ...
+                                                                CFAR_DetectionObj.antenna_azimuthonly, ...
+                                                                LOG_ON, ...
+                                                                STATIC_ONLY, ...
+                                                                PLOT_ON, ...
+                                                                minRangeBinKeep, ...
+                                                                rightRangeBinDiscard);
+                        title('range/azimuth heat map static objects')
+
+                        if (DISPLAY_RANGE_AZIMUTH_DYNAMIC_HEATMAP)                   
+                            subplot(2,3,5);
+                            surf(y_axis, x_axis, (mag_data_static(:,:,frameCountGlobal)).^0.4,'EdgeColor','none');
+                            colormap(gca,"jet");
+                            view(2);
+                            xlabel('meters');    
+                            ylabel('meters');
+                            title({'Static Range-Azimuth Heatmap',strcat('Current Total Frame Number = ', num2str(frameCountGlobal))})
+                            
+                            subplot(2,3,6);
+                            surf(y_axis, x_axis, (mag_data_dynamic(:,:,frameCountGlobal)).^0.4,'EdgeColor','none');
+                            colormap(gca,"jet");
+                            view(2);    
+                            xlabel('meters');    
+                            ylabel('meters');
+                            title({'Dynamic HeatMap', strcat('curent Sweep angle= ',num2str(Txbeam_angle))});
+                            
+                        end
+                        pause(0.1) 
+
+                    end % PLOT_ON
+        
+                end % if length(angleEst) > 0
             
+                cnt = cnt + 1;  
+            end % ~isempty(angleEst) 
+
         end % ~isempty(detection_results)
-            
-        cnt = cnt + 1;    
-        %toc   
+        
+        %% 
 
     end % frameId
-    
+
+
+    %% connect all chirps, and extract phase processing 
     gPhase_RXs = [];
-    for frameId = 1:ceil(numValidFrames/UsedFrame_Skip)
-       gPhase_RXs = cat(1, gPhase_RXs, squeeze(gBeam_Range_Profile(idxTheta, frameId, 10, :, :))); 
+    for frameId = 1:gPhase_obj_validFrameNum %ceil(numValidFrames/UsedFrame_Skip)
+        targetbin = gBeam_frame_obj_rangeBins(idxTheta, frameId, 1);
+        if (targetbin == 0)
+            continue;
+        else
+            gPhase_RXs = cat(1, gPhase_RXs, ...
+                        squeeze(gBeam_Range_Profile(idxTheta, ...
+                                                    frameId, ...
+                                                    gBeam_frame_obj_rangeBins(idxTheta, frameId, 1), ...
+                                                    :, :) ...
+                                                    ));
+            %gPhase_obj_validFrameNum = gPhase_obj_validFrameNum+1;
+        end
     end
     
-    % 删除常用局部变量
-    clearvars peakValuesBin;
-    clearvars peakValuesTargetDistance;
-    clearvars peakValues;
-    clearvars noiseFloorValues;
-    clearvars peakSNRValues;
-    clearvars Data_2DFFT_Mean_logPower;
     %
     % ---------------------Processing All Beam Space one target phase ---------------------
     
@@ -417,71 +507,87 @@ for idxTheta = 1:ceil((length(dataFolder)-2)/dataFolder_Skip)
         pause(0.01)
     end
     
+    if (~isempty(gPhase_RXs))
 
-    for idxRX = 1:genCalibrationMatrixObj.numRxToEnable
-        % 1. get angle 
-        Phase_Angle = unwrap(angle(gPhase_RXs(:, idxRX)));
 
-        if (DEBUG_PLOTS)    
-            figure(7);
-            plot(Phase_Angle);
-            title("unwrap angle value")
-            pause(0.01)
-            
-            signal = diff(Phase_Angle);
-            signal = signal(1:length(signal)-1);
+        for idxRX = 1:genCalibrationMatrixObj.numRxToEnable
+            % 1. get angle 
+            Phase_Angle = unwrap(angle(gPhase_RXs(:, idxRX)));
 
-            figure(8);
-            plot(signal);
-            title("[Comparing] original phase diff signal,, No Smooth")
-            pause(0.01)
-        end
-        
-        % 2.fram 之间的 gap 相位不连续优化处理 
-        % step1 去除 由 number chirp 引起的 相位突变
-        angle_gap = 0.0;
-        for idxChirp = 1:ceil(numValidFrames/UsedFrame_Skip)-1
-            angle_gap = angle_gap + Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops+1) - Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops);
-            Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops:(idxChirp+1)*genCalibrationMatrixObj.nchirp_loops-1) = Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops:(idxChirp+1)*genCalibrationMatrixObj.nchirp_loops-1) - angle_gap;
-        end
-        
+            if (DEBUG_PLOTS)    
+                figure(7);
+                plot(Phase_Angle);
+                title("unwrap angle value")
+                pause(0.01)
+                
+                signal = diff(Phase_Angle);
+                signal = signal(1:length(signal)-1);
 
-        % step2
-        for idxChirp = 1:ceil(numValidFrames/UsedFrame_Skip)-1
-            th1 = abs(Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops-1) -  Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops));
-            th2 = abs(Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops+1) -  Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops));
-            
-            Threshold = abs(Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops+1)- Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops-1));
-    
-            if th1 + th2 > Threshold
-                Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops) = 0.5*(Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops+1) + Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops-1));
+                figure(8);
+                plot(signal);
+                title("[Comparing] original phase diff signal,, No Smooth")
+                pause(0.01)
             end
-        end
-        
-        % step 相位差分
-        Beam_Sgnal = diff(Phase_Angle);
-        Beam_Sgnal = Beam_Sgnal(1:length(Beam_Sgnal)-1);
-
-        if(DEBUG_PLOTS)
-            figure(9);
-            plot(unwrap(angle(gPhase_RXs(:, idxRX))),'color', 'blue' );
-            hold on;
-            plot(Phase_Angle,'color', 'red');
-            hold off;
-            title("Phase Signal")
-            pause(0.01)
-        
-            % figure(10);
-            % plot(Beam_Sgnal);
-            % title("gBeams_Phase_Angle Diff")
-            % pause(0.01)
-
-        end %if(DEBUG_PLOTS)
             
-        gBeams_Cube_Angle(idxTheta, 1:length(Phase_Angle), idxRX) = Phase_Angle;
-        
-    end % idxRx    
-    
+            % 2.fram 之间的 gap 相位不连续优化处理 
+            if (gPhase_obj_validFrameNum > 2)
+                % step1 去除 由 number chirp 引起的 相位突变
+                angle_gap = 0.0;
+                for idxChirp = 1:size(Phase_Angle, 1)/genCalibrationMatrixObj.nchirp_loops-1 
+
+                    angle_gap = angle_gap ...
+                                + Phase_Angle(idxChirp * genCalibrationMatrixObj.nchirp_loops + 1) ...
+                                - Phase_Angle(idxChirp * genCalibrationMatrixObj.nchirp_loops);
+                    
+                    Phase_Angle(idxChirp * genCalibrationMatrixObj.nchirp_loops : ...
+                                (idxChirp+1) * genCalibrationMatrixObj.nchirp_loops - 1) ...
+                                    = Phase_Angle(idxChirp * genCalibrationMatrixObj.nchirp_loops : ...
+                                                (idxChirp + 1) * genCalibrationMatrixObj.nchirp_loops - 1) - angle_gap;
+                end
+                
+
+                % step2
+                for idxChirp = 1:size(Phase_Angle, 1)/genCalibrationMatrixObj.nchirp_loops-1 
+                    th1 = abs( Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops-1) ...
+                                -  Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops));
+                    th2 = abs( Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops+1) ...
+                                -  Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops));
+                    
+                    Threshold = abs(Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops+1) ...
+                                    - Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops-1));
+            
+                    if th1 + th2 > Threshold
+                        Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops) ...
+                                = 0.5*(Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops+1) ...
+                                    + Phase_Angle(idxChirp*genCalibrationMatrixObj.nchirp_loops-1));
+                    end
+                end
+            
+            end
+            
+            % 保存每一个RX 通道的相位数据，【考虑后续在RX通道做beamforming】
+            gBeams_Cube_Angle(idxTheta, 1:length(Phase_Angle), idxRX) = Phase_Angle;
+            
+            if(0)
+                % step 相位差分
+                Beam_Sgnal = diff(Phase_Angle);
+                Beam_Sgnal = Beam_Sgnal(1:length(Beam_Sgnal) - 1);
+                figure(9)
+                subplot(121)
+                plot(unwrap(angle(gPhase_RXs(:, idxRX))),'color', 'blue' );
+                hold on;
+                plot(Phase_Angle,'color', 'red');
+                hold off;
+                title({"Phase Signal", strcat("Target Bin",num2str(targetbin))})
+                subplot(122)
+                plot(Beam_Sgnal);
+                title("gBeams Phase Angle Diff")
+                pause(0.01)
+            end %if(DEBUG_PLOTS)
+                
+        end % idxRx    
+    end %if (~isempty(gPhase_RXs))
+
     % 删除局部变量
     clearvars Cube_Angle;
     clearvars Beam_Sgnal;
@@ -500,13 +606,34 @@ for idxTheta = 1:ceil((length(dataFolder)-2)/dataFolder_Skip)
     end
     
     %% ------------------------------------------对每个角度设置计算其 pSINR
-    % Range-Doppler SNR
+
+    % 所有RX 天线求平均
+    gBeams_Angle = mean(gBeams_Cube_Angle(idxTheta, :, :), 3);
+    gBeams_Angle_diff = diff(gBeams_Angle);
+    if (1)
+        figure(11)
+        subplot(121)
+        plot(gBeams_Angle,'color', 'blue');
+        title({"Phase Signal", strcat("Target Bin",num2str(targetbin))})
+        subplot(122)
+        plot(gBeams_Angle_diff);
+        title("gBeams Phase Angle Diff")
+        pause(0.01)
+    end
     
+    % Calculate Sensing Signal Intensity SNR
+    % SNR part 1
+    target = mode(gBeam_frame_obj_rangeBins(idxTheta, :, 1), 'all');
+    
+    target_idx = find(gBeam_frame_obj_rangeBins(idxTheta, :, 1) == target);
 
-    % Range-Angle SNR
-   
+    Intensity_SNR(idxTheta) = sum(gBeam_frame_obj_estSNR(idxTheta, target_idx, 1), 2) / length(target_idx);
+    
+    disp(strcat("======>>>>> Target Range bin = ", num2str(target)))
+    disp(strcat("======>>>>> Target Index Range bin = ", num2str(target_idx)))
+    disp(strcat("======>>>>> Intensity_SNR(dB) = ", num2str(Intensity_SNR(idxTheta))))
 
-
+    PhaseSingal_SNR = [];  
 
 
 
@@ -514,6 +641,48 @@ for idxTheta = 1:ceil((length(dataFolder)-2)/dataFolder_Skip)
     folderIdx = folderIdx + dataFolder_Skip;
     toc
 end
+
+% Test RXBF result
+if (1)
+    spectrogram_AOD = squeeze( gBeam_dynamic_range_beam_spectrum(:, 2, :) );
+    SweepAngles = (1:size(spectrogram_AOD, 1) * dataFolder_Skip) - ceil(size(spectrogram_AOD, 1)/2);
+
+    sine_theta = sind(SweepAngles);
+    cos_theta = sqrt(1-sine_theta.^2);
+    indices_1D = 1:size(spectrogram_AOD, 2);
+
+    indices_1D_range = (1:size(spectrogram_AOD, 2))*genCalibrationMatrixObj.rangeResolution;
+    [R_mat, sine_theta_mat] = meshgrid(indices_1D_range, sine_theta);
+    [~, cos_theta_mat] = meshgrid(indices_1D_range, cos_theta);
+    x_axis = R_mat.*cos_theta_mat;
+    y_axis = R_mat.*sine_theta_mat;
+
+    figure(19)
+    surf(y_axis, x_axis, abs(spectrogram_AOD).^0.2,'EdgeColor','none');
+    %xlim([-5 5])
+    %ylim([0 10]);
+    view(2);
+    xlabel('Meters')
+    ylabel('Meters')
+
+    % calculate target azimuth
+    [val, idx] = max( 10*log10( abs( sum(spectrogram_AOD,2) ) ) );
+    target_angle = idx * dataFolder_Skip - ceil(size(spectrogram_AOD, 1)/2);
+
+    title({'RxBF stich range/azimuth', strcat("target angle (deg) = ", num2str(target_angle))})
+
+
+end
+
+
+
+
+
+
+
+
+
+
 % 删除原始数据文件相关的 不用局部变量
 clearvars fileIdx_unique;
 clearvars fileNameCascade;
@@ -523,9 +692,10 @@ clearvars rawData;
 
 %% 波束增益绘制
 gBeamGain_power = zeros(1, numTheta);
-figure(11)
+figure(20)
 subplot(1,2,1)
-gBeamGain_power = gBeam_Range_Profile(:, 2, 10, size(gBeam_Range_Profile, 4)/2+1, 1);
+obj1_rangebin = gBeam_frame_obj_rangeBins(idxTheta, frameId, 1);
+gBeamGain_power = gBeam_Range_Profile(:, 2, obj1_rangebin, size(gBeam_Range_Profile, 4)/2+1, 1);
 gBeamGain_power = 10*log10(abs(gBeamGain_power));
 plot(fliplr(gBeamGain_power));
 title("gBeamGain Power Pattern");
@@ -540,42 +710,57 @@ pause(0.01)
 clearvars gBeamGain_power;
 
 
-%% Range-Angle Stich 
-gBeam_RangeDoppler_Profile_zeroDop = squeeze(gBeam_RangeDoppler_Profile(:,2,:,numchirps/2+1,:));
+%% Range-Angle Stich
+PLOT_DYNAMIC = 1;
+ratio = 0.5;
+if PLOT_DYNAMIC 
+    DopplerPower = squeeze( mean( sum( mean( abs(gBeam_RangeDoppler_Profile(:, 2, :, :, :)), 5), 3), 1) );
+    DopplerPower_noDC = DopplerPower([1: numchirps/2-1 numchirps/2+3:end]);
+    [peakVal peakInd] = max(DopplerPower_noDC);
+    threshold = peakVal*ratio;
+    indSel = find(DopplerPower_noDC >threshold);
+    for ii = 1:length(indSel)
+        if indSel(ii) > DopplerFFTSize/2-1
+            indSel(ii) = indSel(ii) + 3;
+        end
+    end
+    angle_range_dynamic = squeeze( gBeam_RangeDoppler_Profile(:, 2, :, indSel, :) );
+    gBeam_RangeDoppler = angle_range_dynamic;
+
+else
+    gBeam_RangeDoppler_Profile_zeroDop = squeeze(gBeam_RangeDoppler_Profile(:,2,:,numchirps/2+1,:));
+    gBeam_RangeDoppler = gBeam_RangeDoppler_Profile_zeroDop;
+end
+
 SweepAngles=(1:dataFolder_Skip:(length(dataFolder)-2)) - ceil((length(dataFolder)-2)/2);
-range_angle_stich = zeros(size(gBeam_RangeDoppler_Profile_zeroDop, 2), length(SweepAngles));
+range_angle_stich = zeros(size(gBeam_RangeDoppler, 2), length(SweepAngles));
 
-TI_Cascade_RX_position_azi = [ 11:14 50:53 46:49 0:3  ];
-TI_Cascade_RX_ID = [13 14 15 16 1 2 3 4 9 10 11 12 5 6 7 8 ]; %RX channel order on TI 4-chip cascade EVM
-D_RX = TI_Cascade_RX_position_azi(TI_Cascade_RX_ID); %RX azimuth antenna coordinate
-
-centerFrequency = Start_Freq_GHz + (genCalibrationMatrixObj.numSamplePerChirp/genCalibrationMatrixObj.Sampling_Rate_sps*Slope_MHzperus)/2;
-dlambda = 0.5*centerFrequency/TI_Cascade_Antenna_DesignFreq;
+D_RX = DOAObj.D_RX;
+dlambda = DOAObj.antDis;
 
 for idxTheta = 1:length(SweepAngles)-1
     angleTX = SweepAngles(idxTheta);
     wx = sind(angleTX);
     a1_az = exp(1j*2*pi*dlambda*(D_RX*wx));
     
-    for irange = 1:size(gBeam_RangeDoppler_Profile_zeroDop, 2)
+    for irange = 1:size(gBeam_RangeDoppler, 2)
         
-        RX_data = squeeze(gBeam_RangeDoppler_Profile_zeroDop(idxTheta, irange, :));
+        RX_data = squeeze(gBeam_RangeDoppler(idxTheta, irange, :));
         
         range_angle_stich(irange, idxTheta) = a1_az*(RX_data'*RX_data)*a1_az';
     end
 end
 sine_theta = sind(SweepAngles);
 cos_theta = sqrt(1-sine_theta.^2);
-indices_1D_half = 1:size(gBeam_RangeDoppler_Profile_zeroDop, 2)/2;
+indices_1D_half = (1:size(gBeam_RangeDoppler, 2)/2);
 
-[R_mat, sine_theta_mat] = meshgrid(indices_1D_half, sine_theta);
-
-[~, cos_theta_mat] = meshgrid(indices_1D_half,cos_theta);
-
+indices_1D_half_range = (1:size(gBeam_RangeDoppler, 2)/2)*genCalibrationMatrixObj.rangeResolution;
+[R_mat, sine_theta_mat] = meshgrid(indices_1D_half_range, sine_theta);
+[~, cos_theta_mat] = meshgrid(indices_1D_half_range, cos_theta);
 x_axis = R_mat.*cos_theta_mat;
 y_axis = R_mat.*sine_theta_mat;
 
-range_angle_stich_half = (range_angle_stich(indices_1D_half + size(gBeam_RangeDoppler_Profile_zeroDop, 2)/2, :).');
+range_angle_stich_half = (range_angle_stich(indices_1D_half + size(gBeam_RangeDoppler, 2)/2, :).');
 figure(12)
 surf(y_axis, x_axis, abs(range_angle_stich_half).^0.2,'EdgeColor','none');
 %xlim([-5 5])
