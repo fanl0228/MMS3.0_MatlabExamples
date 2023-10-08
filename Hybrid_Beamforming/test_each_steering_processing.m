@@ -8,25 +8,36 @@ setenv('CASCADE_SIGNAL_PROCESSING_CHAIN_MIMO', 'D:\ti\mmwave_studio_03_00_00_14\
 UsedFrames = 10;
 NumRx = 16;
 num_chirps = 252;
-LOG_ON = 0;
+LOG_ON = 1;
 PLOT_ON =0;
 
 
-dataFolder_Path = 'I:\20230918_EXP\TXBF_AngleSweep_Vib_Range2m_Angle+45_Sweep121\'; 
+dataFolder_Path = 'I:\20230928_Exp_NLOS\Indoor_Scene2\test1\'; 
 
 i = 1;
 est_PSINR_all =[];
+Intensity_estSINR_all =[];
+Phase_estSINR_all = [];
 for Txbeam_angle = -60:60
-    %Txbeam_angle = 60; % folderIdx = 121
-    
-    
-    [est_PSINR, Txbeam_angle] = Each_Steering_Calculate_pSINR(dataFolder_Path, Txbeam_angle, UsedFrames, NumRx, num_chirps, LOG_ON, PLOT_ON);
-    
-    est_PSINR_all(i) = est_PSINR;
+
+    [Intensity_estSINR, Phase_estSINR, Txbeam_angle] = Each_Steering_Calculate_pSINR(dataFolder_Path, Txbeam_angle, UsedFrames, NumRx, num_chirps, LOG_ON, PLOT_ON);
+    Intensity_estSINR_all(i) = Intensity_estSINR;
+    Phase_estSINR_all(i) = Phase_estSINR;
+    est_PSINR_all(i) = Intensity_estSINR + Phase_estSINR;
     
     i = i +1;
     toc
 end
 
-est_PSINR_all;
+figure(220)
+plot(Intensity_estSINR_all, 'r')
+hold on;
+plot(Phase_estSINR_all, 'b')
+hold on;
+plot(est_PSINR_all, 'g')
+legend(["Intensity", "Phase", "All"]);
 
+est_PSINR_all1=10*log10(10.^(Intensity_estSINR_all./10) + 10.^(Phase_estSINR_all./10));
+hold on;
+plot(est_PSINR_all1, 'k')
+pause(0.01)

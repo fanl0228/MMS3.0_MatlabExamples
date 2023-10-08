@@ -65,8 +65,8 @@ rangeNumBins = size(sig_integ,1);
 detected_Rag_Cell = unique(Ind_obj_Rag(:,1));
 sig = sig_integ(detected_Rag_Cell,:);
 
-M_samp=size(sig, 1);
-N_pul=size(sig, 2);
+M_samp=size(sig, 1); % range dim size
+N_pul=size(sig, 2); % doppler dim size
 
 
 %for each point under test, gapNum samples on the two sides are excluded
@@ -79,17 +79,17 @@ Ind_obj=[];
 noise_obj_an = [];
 vec=zeros(1,N_pul+gaptot*2);
 for k=1:M_samp
-    %get the range index at current range index
+    % get the range index at current range index
     detected_Rag_Cell_i = detected_Rag_Cell(k);
     ind1 = find(Ind_obj_Rag(:,1) == detected_Rag_Cell_i);
     indR = Ind_obj_Rag(ind1, 2);
-    %extend the left the vector by copying the left most the right most
-    %gaptot samples are not detected.
+    % extend the left the vector by copying the left most the right most
+    % gaptot samples are not detected.
     sigv=(sig(k,:));
     vec(1:gaptot) = sigv(end-gaptot+1:end);
     vec(gaptot+1: N_pul+gaptot) = sigv;
     vec(N_pul+gaptot+1:end) = sigv(1:gaptot);
-    %start to process
+    % start to process
     ind_loc_all = [];
     ind_loc_Dop = [];
     ind_obj_0 = 0;

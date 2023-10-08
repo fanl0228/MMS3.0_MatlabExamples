@@ -122,6 +122,7 @@ classdef DOACascade < Module
                             out(numAoAObjCnt).rangeInd = current_obj.rangeInd;
                             out(numAoAObjCnt).dopplerInd = current_obj.dopplerInd;
                             out(numAoAObjCnt).range = current_obj.range;
+                            out(numAoAObjCnt).doppler = current_obj.doppler;
                             out(numAoAObjCnt).doppler_corr = current_obj.doppler_corr;
                             out(numAoAObjCnt).dopplerInd_org = current_obj.dopplerInd_org;
                             out(numAoAObjCnt).noise_var = current_obj.noise_var;
@@ -146,6 +147,7 @@ classdef DOACascade < Module
                             out(numAoAObjCnt).rangeInd = current_obj.rangeInd;
                             out(numAoAObjCnt).dopplerInd = current_obj.dopplerInd;
                             out(numAoAObjCnt).range = current_obj.range;
+                            out(numAoAObjCnt).doppler = current_obj.doppler;
                             out(numAoAObjCnt).doppler_corr = current_obj.doppler_corr;
                             out(numAoAObjCnt).dopplerInd_org = current_obj.dopplerInd_org;
 
@@ -170,6 +172,7 @@ classdef DOACascade < Module
                             out(numAoAObjCnt).rangeInd = current_obj.rangeInd;
                             out(numAoAObjCnt).dopplerInd = current_obj.dopplerInd;
                             out(numAoAObjCnt).range = current_obj.range;
+                            out(numAoAObjCnt).doppler = current_obj.doppler;
                             out(numAoAObjCnt).doppler_corr = current_obj.doppler_corr;
                             out(numAoAObjCnt).dopplerInd_org = current_obj.dopplerInd_org;
 

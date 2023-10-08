@@ -15,7 +15,8 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
     module_param_file = [input_path, 'module_param.m']; 
     
     gframe_obj = {};    
-
+    gRange_Profile = [];
+    gRangeDoppler_Profile = [];
 
     % 判断文件夹是否存在
 
@@ -104,14 +105,54 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
         if ~isempty(CFAR_detection_results)
             % DOA, the results include detection results + angle estimation results.
             % access data with angleEst{frame}(objectIdx).fieldName
-            
+           
+            % sort 
+            [~, estSNR_Rank_Idxs] = sort([CFAR_detection_results.estSNR], "descend");
+            if (length(estSNR_Rank_Idxs) > 10)
+                SNR_TOPN = 10;
+            else
+                SNR_TOPN = length(estSNR_Rank_Idxs);
+            end
+
+            % dellet data of CFAR_detection_results.doppler=0
+            NoDopplerZero_Idxs = find([CFAR_detection_results.doppler]); % find doppler non-zero
+
+            estSNR_Rank_Idxs = intersect(estSNR_Rank_Idxs(1:SNR_TOPN), NoDopplerZero_Idxs, "stable");
+                    
+            if isempty(estSNR_Rank_Idxs)
+                if LOG_ON
+                    disp(["estSNR_Rank_Idxs is empty, Skip FrameId: ", num2str(frameId)])
+                end
+                continue;      
+            end
+
+            new_iobj = 0;
+            for iobj = estSNR_Rank_Idxs
+                new_iobj = new_iobj  + 1;
+                CFAR_detection_results_rank(1, new_iobj).rangeInd                    = CFAR_detection_results(1, iobj).rangeInd;
+                CFAR_detection_results_rank(1, new_iobj).range                       = CFAR_detection_results(1, iobj).range;
+                CFAR_detection_results_rank(1, new_iobj).dopplerInd_org              = CFAR_detection_results(1, iobj).dopplerInd_org;
+                CFAR_detection_results_rank(1, new_iobj).dopplerInd                  = CFAR_detection_results(1, iobj).dopplerInd;
+                CFAR_detection_results_rank(1, new_iobj).doppler                     = CFAR_detection_results(1, iobj).doppler;
+                CFAR_detection_results_rank(1, new_iobj).doppler_corr                = CFAR_detection_results(1, iobj).doppler_corr;
+                CFAR_detection_results_rank(1, new_iobj).noise_var                   = CFAR_detection_results(1, iobj).noise_var;
+                CFAR_detection_results_rank(1, new_iobj).bin_val                     = CFAR_detection_results(1, iobj).bin_val;
+                CFAR_detection_results_rank(1, new_iobj).bin_val_org                 = CFAR_detection_results(1, iobj).bin_val_org;
+                CFAR_detection_results_rank(1, new_iobj).estSNR                      = CFAR_detection_results(1, iobj).estSNR;
+                CFAR_detection_results_rank(1, new_iobj).doppler_corr_overlap        = CFAR_detection_results(1, iobj).doppler_corr_overlap;
+                CFAR_detection_results_rank(1, new_iobj).doppler_corr_FFT            = CFAR_detection_results(1, iobj).doppler_corr_FFT;
+            end
+
+
             % DOA Processing
-            angleEst = datapath(DOAObj, CFAR_detection_results, Txbeam_angle, DopplerFFTOut);
+            angleEst = datapath(DOAObj, CFAR_detection_results_rank, Txbeam_angle, DopplerFFTOut);
+            
+            maxRangeShow = CFAR_DetectionObj.rangeBinSize * rangeFFTObj.rangeFFTSize;
             
             % Visualization
             if PLOT_ON
                 figure(103);
-                set(gcf,'units','normalized','outerposition',[0.1 0.1 0.8 0.8])                
+                set(gcf,'units','normalized','outerposition',[0.05 0.3 0.6 0.6])                
                 
                 subplot(2,3,1)               
                 plot((1:size(RD_Sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, RD_Sig_integrate(:,size(RD_Sig_integrate,2)/2+1),'g','LineWidth',4);
@@ -133,23 +174,26 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                         end
                     end
                 end
+                
                 xlabel('Range(m)');
                 ylabel('Receive Power (dB)')
-                title(['Range Profile(zero Doppler - thick green line): valid_obj_frameId ' num2str(valid_obj_frameId)]);
+                title({'Range Profile(zero Doppler - thick green line):',' valid obj frameId ' num2str(valid_obj_frameId)});
                 hold off;
 
                 subplot(2,3,2);
                 %subplot_tight(2,2,2,0.1)
                 RD_Sig_integrate_noDC = RD_Sig_integrate(:, [1:size(RD_Sig_integrate,2)/2-1 size(RD_Sig_integrate,2)/2+3:end]);
-                % [Y,X]=meshgrid(1:1:size(RD_Sig_integrate_noDC,1), -size(RD_Sig_integrate_noDC,2)/2+1:1:size(RD_Sig_integrate_noDC,2)/2);
-                % Y = Y * CFAR_DetectionObj.rangeBinSize;
-                % X = X * CFAR_DetectionObj.velocityBinSize;
-                fig2 = pcolor(RD_Sig_integrate_noDC);
+                [Y, X]=meshgrid(1:1:size(RD_Sig_integrate_noDC,1), -size(RD_Sig_integrate_noDC,2)/2+1:1:size(RD_Sig_integrate_noDC,2)/2);
+                Y = Y * CFAR_DetectionObj.rangeBinSize;
+                X = X * CFAR_DetectionObj.velocityBinSize;
+                fig2 = pcolor(X,Y, RD_Sig_integrate_noDC');
                 fig2.FaceColor = 'interp';
                 fig2.LineStyle="none";
                 colormap(gca,"jet");
                 c = colorbar;
                 c.Label.String = 'Relative Power(dB)';
+               
+                ylim([1 maxRangeShow/2])
 
                 [RD_SNR_max_val, RD_SNR_max_idx]= max(detect_all_points(:, 4));
                 title({' Range/Velocity Plot No-DC', ...
@@ -163,20 +207,57 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
 
 
             if ~isempty(angleEst)
-                
-
                 %% Filting using the doppler, estSNR, and Range angle fft
                 % 去掉doppler_corr为0的目标,并且SNR取 top10
-                idxs1 = find([angleEst.doppler_corr]);
+                idxs0 = find([angleEst.rangeInd] < rangeFFTObj.rangeFFTSize/2); % find range bin < rangeFFTSize/2
+
+                idxs1 = find([angleEst.doppler_corr]); % find doppler non-zero
                 
-                [~, idxs2] = sort([angleEst.estSNR], "descend");
-                if (length(idxs2) > 20)
-                    SNR_TOPN = 20;
-                else
-                    SNR_TOPN = length(idxs2);
+                idxs1 = intersect(idxs0, idxs1, "stable");
+                
+                if 0
+                    Obj_rangeInds = [angleEst(1, idxs1).rangeInd];
+                    
+                    Angle_range = mag_data_dynamic(:, Obj_rangeInds, valid_obj_frameId); % [angle, range, frame]
+                    %Angle_range(:,1:size(RA_data,2)) = RA_data(:,:);
+                    if 0
+                        figure(22)
+                        fig2 = pcolor(Angle_range);
+                        fig2.FaceColor = 'interp';
+                        fig2.LineStyle="none";
+                        colormap(gca,"jet");
+                        c = colorbar;
+                        c.Label.String = 'Relative Power(dB)';                    
+                    end
+                    
+                    [vals, locs] = max(max(Angle_range));
+                    Angle_range(Angle_range<0.8*vals) = 0;
+    
+                    if 0
+                        figure(23)
+                        fig2 = pcolor(Angle_range);
+                        fig2.FaceColor = 'interp';
+                        fig2.LineStyle="none";
+                        colormap(gca,"jet");
+                        c = colorbar;
+                        c.Label.String = 'Relative Power(dB)';                    
+                    end
+    
+                    [rows, cols]=find(Angle_range(:,:)~=0);
                 end
-                idxs3 = intersect(idxs1, idxs2(1:SNR_TOPN));
-                if isempty(idxs3)
+
+                % [~, idxs2] = sort([angleEst.estSNR], "descend");
+                % if (length(idxs2) > 20)
+                %     SNR_TOPN = 20;
+                % else
+                %     SNR_TOPN = length(idxs2);
+                % end
+                % idxs3_array = intersect(idxs1, idxs2(1:SNR_TOPN));
+                       
+                %idxs3_array = unique(cols);
+                idxs3_array = idxs1;
+
+                if isempty(idxs3_array)
                     if LOG_ON
                         disp(["idxs3 is empty, and no object can be detected."])
                     end
@@ -188,20 +269,23 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
 
                 % 
                 % 计算target信噪比，从中取SNR 前top N个点作为基础点。 angleEst
-                for iobj = 1:length(idxs3)
-                    out_frame(1, iobj).rangeInd                    = angleEst(1, iobj).rangeInd;
-                    out_frame(1, iobj).dopplerInd                  = angleEst(1, iobj).dopplerInd;
-                    out_frame(1, iobj).range                       = angleEst(1, iobj).range;
-                    out_frame(1, iobj).doppler_corr                = angleEst(1, iobj).doppler_corr;
-                    out_frame(1, iobj).dopplerInd_org              = angleEst(1, iobj).dopplerInd_org;
-                    out_frame(1, iobj).noise_var                   = angleEst(1, iobj).noise_var;
-                    out_frame(1, iobj).bin_val                     = angleEst(1, iobj).bin_val;
-                    out_frame(1, iobj).estSNR                      = angleEst(1, iobj).estSNR;
-                    out_frame(1, iobj).doppler_corr_overlap        = angleEst(1, iobj).doppler_corr_overlap;
-                    out_frame(1, iobj).doppler_corr_FFT            = angleEst(1, iobj).doppler_corr_FFT;
-                    out_frame(1, iobj).angles                      = angleEst(1, iobj).angles;
-                    out_frame(1, iobj).spectrum                    = angleEst(1, iobj).spectrum;
-                    out_frame(1, iobj).range_beam_spectrum         = angleEst(1, iobj).range_beam_spectrum;
+                new_iobj = 0;
+                for iobj = idxs3_array
+                    new_iobj = new_iobj  + 1;
+                    out_frame(1, new_iobj).rangeInd                    = angleEst(1, iobj).rangeInd;
+                    out_frame(1, new_iobj).dopplerInd                  = angleEst(1, iobj).dopplerInd;
+                    out_frame(1, new_iobj).range                       = angleEst(1, iobj).range;
+                    out_frame(1, new_iobj).doppler                     = angleEst(1, iobj).doppler;
+                    out_frame(1, new_iobj).doppler_corr                = angleEst(1, iobj).doppler_corr;
+                    out_frame(1, new_iobj).dopplerInd_org              = angleEst(1, iobj).dopplerInd_org;
+                    out_frame(1, new_iobj).noise_var                   = angleEst(1, iobj).noise_var;
+                    out_frame(1, new_iobj).bin_val                     = angleEst(1, iobj).bin_val;
+                    out_frame(1, new_iobj).estSNR                      = angleEst(1, iobj).estSNR;
+                    out_frame(1, new_iobj).doppler_corr_overlap        = angleEst(1, iobj).doppler_corr_overlap;
+                    out_frame(1, new_iobj).doppler_corr_FFT            = angleEst(1, iobj).doppler_corr_FFT;
+                    out_frame(1, new_iobj).angles                      = angleEst(1, iobj).angles;
+                    out_frame(1, new_iobj).spectrum                    = angleEst(1, iobj).spectrum;
+                    out_frame(1, new_iobj).range_beam_spectrum         = angleEst(1, iobj).range_beam_spectrum;
                 end
 
                 valid_obj_frameId = valid_obj_frameId + 1;
@@ -247,12 +331,12 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
 
                         angles_all_all{valid_obj_frameId} = angles_all_points;
                         xyz_all{valid_obj_frameId}  = xyz;
-                        maxRangeShow = CFAR_DetectionObj.rangeBinSize * rangeFFTObj.rangeFFTSize;
+                        
                         %tic
                         
                         if PLOT_ON
                             moveID = find(abs(xyz(:,4))>=0);
-                            subplot(2,3,3);                        
+                            subplot(2,3,6);                        
                             
                             if valid_obj_frameId==1
                                 scatter3(xyz(moveID,1),xyz(moveID,2),xyz(moveID,3),45,(xyz(moveID,4)), 'filled');
@@ -266,8 +350,8 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                             c.Label.String = 'velocity (m/s)';                        
                             grid on;
                             
-                            xlim([-20 20])
-                            ylim([1 maxRangeShow])
+                            xlim([-10 10])
+                            ylim([1 maxRangeShow/2])
                             %zlim([-4 4])
                             zlim([-5 5])
                             xlabel('X (m)')
@@ -278,11 +362,12 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                             title(' 3D point cloud');
                             
                             % plot range and azimuth heatmap
-                            subplot(2,3,4)
+                            subplot(2,3,3)
                             % STATIC_ONLY: 1 = plot heatmap for zero-Doppler; 0 = plot heatmap for nonzero-Doppler
+                            PLOT_ON_RA = 1;
                             STATIC_ONLY = 1; 
-                            minRangeBinKeep = 2;
-                            rightRangeBinDiscard =  20;
+                            minRangeBinKeep = 1;
+                            rightRangeBinDiscard = 20;
                             [mag_data_static(:,:,valid_obj_frameId), ...
                             mag_data_dynamic(:,:,valid_obj_frameId), ...
                             y_axis, x_axis] = plot_range_azimuth_2D(CFAR_DetectionObj.rangeBinSize, ...
@@ -292,29 +377,33 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                                                                     CFAR_DetectionObj.antenna_azimuthonly, ...
                                                                     LOG_ON, ...
                                                                     STATIC_ONLY, ...
-                                                                    PLOT_ON, ...
+                                                                    PLOT_ON_RA, ...
                                                                     minRangeBinKeep, ...
                                                                     rightRangeBinDiscard);
                             title('range/azimuth heat map static objects')
-
-                            if PLOT_ON                  
-                                subplot(2,3,5);
+                                
+                            if PLOT_ON
+                                subplot(2,3,4);
                                 surf(y_axis, x_axis, (mag_data_static(:,:,valid_obj_frameId)).^0.4,'EdgeColor','none');
                                 colormap(gca,"jet");
+                                xlim([-10 10])
+                                ylim([1 maxRangeShow/2])
                                 view(2);
                                 xlabel('meters');    
                                 ylabel('meters');
                                 title({'Static Range-Azimuth Heatmap',strcat('Current Total Frame Number = ', num2str(valid_obj_frameId))})
                                 
-                                subplot(2,3,6);
+                                subplot(2,3,5);
                                 surf(y_axis, x_axis, (mag_data_dynamic(:,:,valid_obj_frameId)).^0.4,'EdgeColor','none');
                                 colormap(gca,"jet");
+                                xlim([-10 10])
+                                ylim([1 maxRangeShow/2])
                                 view(2);    
                                 xlabel('meters');    
                                 ylabel('meters');
                                 title({'Dynamic HeatMap', strcat('curent Sweep angle= ',num2str(Txbeam_angle))});
-                                
                             end
+                            
                             pause(0.1) 
 
                         end % PLOT_ON

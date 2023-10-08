@@ -6,8 +6,8 @@ function [gCalib_Angle] = frame_phase_calibration(gPhase_RXs, validFramsNum, num
             % 1. get angle 
             Phase_Angle = unwrap(angle(gPhase_RXs(:, idxRX)));
 
-            if PLOT_ON    
-                figure(110);
+            if 0    
+                figure(7);
                 plot(Phase_Angle);
                 title("unwrap angle value")
                 pause(0.01)
@@ -60,7 +60,7 @@ function [gCalib_Angle] = frame_phase_calibration(gPhase_RXs, validFramsNum, num
             % 保存每一个RX 通道的相位数据，【考虑后续在RX通道做beamforming】
             gCalib_Angle(1:length(Phase_Angle), idxRX) = Phase_Angle;
             
-            if PLOT_ON
+            if false
                 % step 相位差分
                 Beam_Sgnal = diff(Phase_Angle);
                 Beam_Sgnal = Beam_Sgnal(1:length(Beam_Sgnal) - 1);

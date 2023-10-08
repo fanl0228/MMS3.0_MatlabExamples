@@ -84,9 +84,11 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
             noiseInd = ind2R(ind2D);
             noise_obj_agg(i_obj) = noise_obj(noiseInd);
         end
+        noise_obj_agg1 = noise_obj_agg; %+ mean(noise_obj_an);
+
         
         for i_obj = 1:N_obj
-            xind = (Ind_obj(i_obj,1)-1) -1;
+            xind = (Ind_obj(i_obj,1)-1) + 1;
             detection_results(i_obj).rangeInd = Ind_obj(i_obj, 1) - 1;  %range index
             detection_results(i_obj).range = (detection_results(i_obj).rangeInd) * obj.rangeBinSize;  %range estimation
             dopplerInd  = Ind_obj(i_obj, 2) - 1;  %Doppler index
@@ -95,7 +97,7 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
             
             %velocity estimation
             detection_results(i_obj).doppler = (dopplerInd-obj.dopplerFFTSize/2) * obj.velocityBinSize;
-            detection_results(i_obj).doppler_corr = detection_results(i_obj).doppler;
+            detection_results(i_obj).doppler_corr = detection_results(i_obj).doppler; % sig_integrate(detection_results(i_obj).rangeInd, detection_results(i_obj).dopplerInd); %detection_results(i_obj).doppler;
             detection_results(i_obj).noise_var = noise_obj_agg(i_obj);       %noise variance
             detection_results(i_obj).bin_val  = reshape(input(xind, Ind_obj(i_obj,2),:), obj.numAntenna, 1);  %2d FFT value for the 4 antennas
             detection_results(i_obj).estSNR   = 10*log10(sum(abs(detection_results (i_obj).bin_val).^2)/sum(detection_results (i_obj).noise_var));  %2d FFT value for the 4 antennas
@@ -185,7 +187,7 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
                 %Vmax extention algorithm
                 
                 deltaPhi = 2*pi*(dopplerInd-obj.dopplerFFTSize/2)/( obj.TDM_MIMO_numTX*obj.dopplerFFTSize);
-                sig_bin_org = detection_results (i_obj).bin_val;
+                sig_bin_org = detection_results(i_obj).bin_val;
                 
                 % for i_TX = 1:obj.TDM_MIMO_numTX
                 %     RX_ID = (i_TX-1)*obj.numRxAnt+1 : i_TX*obj.numRxAnt;
@@ -195,7 +197,7 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
                     RX_ID = (i_TX-1)*obj.numRxAnt+1 : i_TX*obj.numRxAnt;
                     sig_bin(RX_ID,: )= sig_bin_org(RX_ID )* exp(-1j*(i_TX-1)*deltaPhi);
                 end
-                
+                detection_results(i_obj).bin_val_org = sig_bin_org;
                 detection_results(i_obj).bin_val = sig_bin;
                 detection_results(i_obj).doppler_corr_overlap = detection_results(i_obj).doppler_corr;
                 detection_results(i_obj).doppler_corr_FFT = detection_results(i_obj).doppler_corr;

@@ -208,7 +208,7 @@ antenna_azimuthonly                 = ind(ID_unique); %virtual channel ID only f
 CFAR_CASO_enable                    = 1;
 CFAR_CASO_detectMethod              = 1;                %(CASO-CFAR)dualpass rng/dop; only support one CFAR method
 CFAR_CASO_numAntenna                = numVirtualRxAnt; %number of antennas
-CFAR_CASO_refWinSize                = [20, 5];          % number of reference cells to estimate noise variance
+CFAR_CASO_refWinSize                = [10, 6];          % number of reference cells to estimate noise variance
 CFAR_CASO_guardWinSize              = [10, 0];           % number of gap cells to prevent leakage being detected as signal
 CFAR_CASO_K0                        = [5, 2];            % Threshold scaling factor -- 6.3 corresponds to SNR of 8dB
 CFAR_CASO_maxEnable                 = 1;                %1: detect only if it is the maximum within window; 0: otherwise
@@ -222,8 +222,8 @@ CFAR_CASO_discardCellRight          = 10;               % Number of range bins t
 CFAR_CASO_numRxAnt                  = length(RxForMIMOProcess);
 CFAR_CASO_TDM_MIMO_numTX            = length(TxForMIMOProcess);  % modify for TXBF    TxForMIMOProcess = [10]
 CFAR_CASO_antenna_azimuthonly       = antenna_azimuthonly; %virtual channel ID only for unique azimuth ID
-CFAR_CASO_minDisApplyVmaxExtend     = 10; % meter, within this range, do not apply max velocity extension, 
-CFAR_CASO_applyVmaxExtend           = 0; % This function need to use overlap anntenna to do max velocity unwrap, TXBF can not use it.
+CFAR_CASO_minDisApplyVmaxExtend     = 5; % meter, within this range, do not apply max velocity extension, 
+CFAR_CASO_applyVmaxExtend           = 1; % This function need to use overlap anntenna to do max velocity unwrap, TXBF can not use it.
 
 %find the overlap antenna ID that can be used for phase compensation
 TX_ID_MIMO = repmat(1:length(TxForMIMOProcess),length(RxForMIMOProcess),1);
