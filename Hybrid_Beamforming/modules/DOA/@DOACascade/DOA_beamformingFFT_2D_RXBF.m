@@ -31,8 +31,6 @@ angleFFTSize = obj.DOAFFTSize;
 DopplerFFTSize = obj.dopplerFFTSize;
 
 
-
-
 %%
 %FFT based implementation
 %first form a 2D matrix based on the antenna coordinates

@@ -9,10 +9,10 @@ UsedFrames = 10;
 NumRx = 16;
 num_chirps = 252;
 LOG_ON = 1;
-PLOT_ON =0;
+PLOT_ON =1;
 
 
-dataFolder_Path = 'I:\20230928_Exp_NLOS\Indoor_Scene2\test1\'; 
+dataFolder_Path = 'I:\20230928_Exp_NLOS\Indoor_Scene1\test1\'; 
 
 i = 1;
 est_PSINR_all =[];
@@ -30,14 +30,17 @@ for Txbeam_angle = -60:60
 end
 
 figure(220)
-plot(Intensity_estSINR_all, 'r')
+search_angle = -floor(length(Intensity_estSINR_all)/2):1:floor(length(Intensity_estSINR_all)/2);
+plot(search_angle, flip(Intensity_estSINR_all), 'r')
 hold on;
-plot(Phase_estSINR_all, 'b')
+plot(search_angle, flip(Phase_estSINR_all), 'b')
 hold on;
-plot(est_PSINR_all, 'g')
-legend(["Intensity", "Phase", "All"]);
+plot(search_angle, flip(est_PSINR_all), 'g')
 
-est_PSINR_all1=10*log10(10.^(Intensity_estSINR_all./10) + 10.^(Phase_estSINR_all./10));
-hold on;
-plot(est_PSINR_all1, 'k')
+xlim([-floor(length(Intensity_estSINR_all)/2), floor(length(Intensity_estSINR_all)/2)])
+
+legend(["Intensity SINR", "Motion SINR", "All PSINR"]);
+xlabel("Beamsearching Angle")
+ylabel("SINR(dB)")
+title("Evaluate PSINR Metric")
 pause(0.01)

@@ -292,9 +292,8 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                 detection_results_all_frames{valid_obj_frameId} = out_frame;
                 
                 % calculate target azimuth
-                [~, idx_angle] = max( 10*log10( abs( [angleEst.range_beam_spectrum] ) ) );
-                
-                % if(ismember(idx_angle, idxs3))
+                % [~, idx_angle] = max( 10*log10( abs( [angleEst.range_beam_spectrum] ) ) );
+                % if(ismember(idx_angle, idxs3_array))
                 %     obj_rangebin = idx_angle;
                 % else
                 %     obj_rangebin= [detection_results_all_frames{valid_obj_frameId}.rangeInd];
