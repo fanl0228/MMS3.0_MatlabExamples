@@ -279,7 +279,7 @@ d_optimal                                   = 0.5 * centerFreq / TI_Cascade_Ante
 
 DOACascade_enable                           = 1;
 DOACascade_D                                = D;
-DOACascade_DOAFFTSize                       = 256;
+DOACascade_DOAFFTSize                       = 128;
 DOACascade_numAntenna                       = numVirtualRxAnt;
 DOACascade_antPos                           = [0:numVirtualRxAnt-1];
 DOACascade_antDis                           = d_optimal;              % in terms of lamda

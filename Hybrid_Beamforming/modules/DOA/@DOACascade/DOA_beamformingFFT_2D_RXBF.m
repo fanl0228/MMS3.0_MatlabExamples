@@ -16,7 +16,9 @@
 %   angleObj_est: angle estimation results
 %   angle_sepc_2D_fft: angle 2D fft spectrum
 
-function [angleObj_est, angle_sepc_2D_fft, range_beam_angle]= DOA_beamformingFFT_2D_RXBF(obj, sig, Txbeam_angle, DopplerFFTIn)
+function [angleObj_est, angle_sepc_2D_fft, range_beam_angle]= DOA_beamformingFFT_2D_RXBF(obj, sig, current_obj, Txbeam_angle, DopplerFFTIn)
+
+range_beam_angle = [];
 
 %field of view to do beamforming
 angles_DOA_az = obj.angles_DOA_az;
@@ -26,10 +28,47 @@ angles_DOA_ele = obj.angles_DOA_ele;
 d = obj.antDis;
 %2D matrix providing antenna coordinates
 
+f0 = 77e9;
 D_BF = obj.D(:,1);
 angleFFTSize = obj.DOAFFTSize; 
 DopplerFFTSize = obj.dopplerFFTSize;
 
+
+%% ---test RxBF ----
+if 1
+    %decide non-zero doppler bins to be used for dynamic range-azimuth heatmap
+    ratio = 0.5;
+    DopplerPower = sum(mean((abs(DopplerFFTIn(:,:,:))),3),1);
+    DopplerPower_noDC = DopplerPower([1: DopplerFFTSize/2-1 DopplerFFTSize/2+3:end]);
+    [peakVal peakInd] = max(DopplerPower_noDC);
+    threshold = peakVal*ratio;
+    indSel = find(DopplerPower_noDC >threshold);
+    for ii = 1:length(indSel)
+        if indSel(ii) > DopplerFFTSize/2-1
+            indSel(ii) = indSel(ii) + 3;
+        end
+    end
+    % dynamic
+    angle_range_dynamic = squeeze(sum(DopplerFFTIn(:, indSel, :), 2) );
+    wx = sind(Txbeam_angle);
+    a1_az = exp(1j*2*pi*d*(D_BF*wx));
+    
+    for irange = 1:size(angle_range_dynamic,1)
+        RX_data = squeeze(angle_range_dynamic(irange, :));
+        range_beam_angle(irange) = a1_az'*(RX_data'*RX_data)*a1_az;
+    end
+    % CFAR Detection
+    [N_obj, Ind_obj, noise_obj, CFAR_SNR] = CFAR_SO(10*log10(abs(range_beam_angle).^2), 10, 5, 1.2, 0);
+    if 0
+        figure(333)
+        plot(10*log10(abs(range_beam_angle).^2))
+        hold on;
+        scatter(Ind_obj, noise_obj)
+        title("Range angle CFAR\_SO, N\_obj: ", num2str(N_obj));
+        pause(0.01)
+        hold off;
+    end
+end
 
 %%
 %FFT based implementation
@@ -38,22 +77,42 @@ D = obj.D;
 D = D + 1;
 apertureLen_azim = max(D(:,1));
 apertureLen_elev = max(D(:,2));
-sig_2D = zeros(apertureLen_azim,apertureLen_elev);
+sig_2D = zeros(apertureLen_azim, apertureLen_elev);
 for i_line = 1:apertureLen_elev
     ind = find(D(:,2) == i_line);
     D_sel = D(ind,1);
     sig_sel = sig(ind);
-    [val indU] = unique(D_sel);
+    [val, indU] = unique(D_sel);
     
-    sig_2D(D_sel(indU),i_line) = sig_sel(indU);
+    sig_2D(D_sel(indU), i_line) = sig_sel(indU);
     
+    % RxBF
+    wx = sind(Txbeam_angle);
+    a1_az = exp(-1j*2*pi*f0*d*(D_BF*wx)); 
+    sig_2D_RxBF(D_sel(indU), i_line) = sig_sel(indU) .* a1_az;  
+      
+end
+% 
+%%
+% run FFT on azimuth and elevation
+angle_sepc_1D_fft_RxBF = fftshift(fft(sig_2D_RxBF, angleFFTSize,1),1); 
+angle_sepc_1D_fft_RxBF = flipud(angle_sepc_1D_fft_RxBF);
+% angle_sepc_1D_fft = angle_sepc_1D_fft_RxBF;
+% No RXBF
+angle_sepc_1D_fft = fftshift(fft(sig_2D, angleFFTSize,1),1); 
+angle_sepc_1D_fft = flipud(angle_sepc_1D_fft);
+
+angle_sepc_2D_fft=fftshift(fft(angle_sepc_1D_fft, angleFFTSize, 2),2);  % 
+
+if 0
+    figure(565)
+    plot(abs(angle_sepc_1D_fft),'b');
+    hold on;
+    plot(abs(angle_sepc_1D_fft_RxBF), 'r');
+    hold off;
+    pause(0.01)
 end
 
-%run FFT on azimuth and elevation
-angle_sepc_1D_fft = fftshift(fft(sig_2D,angleFFTSize,1),1); 
-% angle_sepc_1D_fft = fft(sig_2D,angleFFTSize,1); 
-angle_sepc_1D_fft = flipud(angle_sepc_1D_fft);
-angle_sepc_2D_fft=fftshift(fft(angle_sepc_1D_fft,angleFFTSize,2),2);  % 
 
 wx_vec=[-pi:2*pi/angleFFTSize:pi];
 wz_vec=[-pi:2*pi/angleFFTSize:pi];
@@ -61,10 +120,11 @@ wx_vec = wx_vec(1:end-1);
 wz_vec = wz_vec(1:end-1);
 %use one row with complete azimuth antenna of 1D FFT output for azimuth
 %estimation
-spec_azim = abs(angle_sepc_1D_fft(:,1));
+spec_azim = abs(angle_sepc_1D_fft_RxBF(:,1));
 obj.sidelobeLevel_dB = obj.sidelobeLevel_dB_azim;
 
 [peakVal_azim, peakLoc_azim] = DOA_BF_PeakDet_loc(obj, spec_azim);
+
 if apertureLen_elev ==1
     %azimuth array only, no elevation antennas
     obj_cnt = 1;
@@ -74,10 +134,14 @@ if apertureLen_elev ==1
         
         azim_est = asind(wx_vec(ind)/(2*pi*d)); % 估算目标所在的角度值
         if (azim_est >= angles_DOA_az(1) && azim_est <= angles_DOA_az(2))
-            angleObj_est(1,obj_cnt) = azim_est;
-            angleObj_est(2,obj_cnt) = 0;
-            angleObj_est(3,obj_cnt) = ind;
-            angleObj_est(4,obj_cnt) = 0;
+            angleObj_est(1, obj_cnt) = azim_est;
+            angleObj_est(2, obj_cnt) = 0;
+            angleObj_est(3, obj_cnt) = ind;
+            angleObj_est(4, obj_cnt) = 0;
+
+            locs = setdiff(1:length(spec_azim), ind);
+            angleObj_est(5, obj_cnt) = 10*log10((peakVal_azim(i_obj).^2)./mean(spec_azim(locs)));
+
             obj_cnt = obj_cnt+1;
             
         else
@@ -125,33 +189,9 @@ else
 end
 
 
-%%
-%decide non-zero doppler bins to be used for dynamic range-azimuth heatmap
-ratio = 0.5;
-DopplerPower = sum(mean((abs(DopplerFFTIn(:,:,:))),3),1);
-DopplerPower_noDC = DopplerPower([1: DopplerFFTSize/2-1 DopplerFFTSize/2+3:end]);
-[peakVal peakInd] = max(DopplerPower_noDC);
-threshold = peakVal*ratio;
-indSel = find(DopplerPower_noDC >threshold);
-for ii = 1:length(indSel)
-    if indSel(ii) > DopplerFFTSize/2-1
-        indSel(ii) = indSel(ii) + 3;
-    end
-end
-
-angle_range_dynamic = squeeze(sum(DopplerFFTIn(:, indSel, :), 2) );
-wx = sind(Txbeam_angle);
-a1_az = exp(1j*2*pi*d*(D_BF*wx));
-
-for irange = 1:size(angle_range_dynamic,1)
-    RX_data = squeeze(angle_range_dynamic(irange, :));
-    range_beam_angle(irange) = a1_az'*(RX_data'*RX_data)*a1_az;
-end
 
 
-% figure(333)
-% plot(10*log10(abs(Range_BeamAngle).^2))
-% pause(0.01)
+
 
 
 

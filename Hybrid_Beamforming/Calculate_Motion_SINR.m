@@ -2,7 +2,7 @@
 
 % phaseAngle: [chirps*frames, nRx]
 %
-function [estSNR] = Calculate_Motion_SINR(phaseAngle, Signal_FS, nFrames, nChirps, nRx)
+function [motion_estSNR] = Calculate_Motion_SINR(phaseAngle, Signal_FS, nFrames, nChirps, nRx)
 
 % input assert
 [cur_nSig, cur_nRx] = size(phaseAngle);
@@ -44,7 +44,9 @@ noise_idx = setdiff( (1:(nFFTSize/2)),  [locs]);
 
 noise_power = sum(gAngle_diff_fft_norm_half(noise_idx).^2) /length(noise_idx);
 
-estSNR = 10*log10(signal_power/noise_power);
+motion_estSNR = 10*log10(signal_power/noise_power);
+
+%motion_estSNR = 10*log10(signal_power);
 
 end
 

@@ -3,7 +3,7 @@
 %
 %
 
-function [Intensity_estSINR, Phase_estSINR, Txbeam_angle] = Each_Steering_Calculate_pSINR(dataFolder_Path, Txbeam_angle, UsedFrames, NumRx, num_chirps, LOG_ON, PLOT_ON)
+function [Intensity_estSINR, Phase_estSINR, gframe_obj] = Each_Steering_Calculate_pSINR(dataFolder_Path, Txbeam_angle, UsedFrames, NumRx, num_chirps, LOG_ON, PLOT_ON)
  
 dataFolder = dir(dataFolder_Path);
 floder_offset = 2;
@@ -13,8 +13,11 @@ dataFolderName = strcat([dataFolder(folderIdx).folder, '\', dataFolder(folderIdx
 
 [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_processing(dataFolderName, Txbeam_angle, UsedFrames, LOG_ON, PLOT_ON);
 
+% RxBF 数据结果处理
 
-%% connect all chirps, and extract phase processing 
+
+
+%% ---------------------- connect all chirps, and extract phase processing 
 gPhase_RXs = [];
 Intensity_SNR = [];
 for frameId = 1:length(gframe_obj)
@@ -30,8 +33,14 @@ for frameId = 1:length(gframe_obj)
         end
         continue;
     end
-
+    
+    locs = setdiff(1:length(gframe_obj{frameId}.RA_Spectrum), targetbin+1);
+    Intensity_RA_SNR(frameId) = 10*log10((abs(gframe_obj{frameId}.RA_Spectrum(targetbin+1)).^2)./abs(mean(gframe_obj{frameId}.RA_Spectrum(locs))));
+    
     Intensity_SNR(frameId) = sum([gframe_obj{frameId}.estSNR(target_idx)]) / length(target_idx);
+    
+    Intensity_SNR(frameId) =  Intensity_SNR(frameId);% + Intensity_RA_SNR(frameId);
+
     if LOG_ON
         disp({strcat("======>>>>> FrameId = ", num2str(frameId)), ...
               strcat("Target Range bin = ", num2str(targetbin)), ...
@@ -47,7 +56,7 @@ for frameId = 1:length(gframe_obj)
     end
 end
 
-% Calculate the intensity signal-to-noise ratio
+% --------------- Calculate the intensity signal-to-noise ratio
 if isempty(Intensity_SNR)
     Intensity_estSINR = -1;
     Phase_estSINR = -1;
@@ -90,7 +99,8 @@ if 1
         " Phase_estSINR(dB): ", Phase_estSINR, " est_PSINR(dB): ", est_PSINR])
 end
 
-if 1
+%% 可视化 差分信号
+if 0
     % All RX antennas are averaged and the calibrated data signal is plotted.
     gAngle = mean(gCalib_Angle(:, :), 2);
     gAngle_diff = diff(gAngle);

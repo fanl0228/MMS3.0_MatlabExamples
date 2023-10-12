@@ -99,7 +99,7 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
             detect_all_points(iobj, 4)      =CFAR_detection_results(iobj).estSNR;
         end
 
-        %% -----------------Range Angle, Point Cloud Generation------------------------------
+        %% -----------------Range Angle, Point Cloud Generation------------
         angles_all_points = [];
         xyz = [];
         if ~isempty(CFAR_detection_results)
@@ -143,8 +143,7 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                 CFAR_detection_results_rank(1, new_iobj).doppler_corr_FFT            = CFAR_detection_results(1, iobj).doppler_corr_FFT;
             end
 
-
-            % DOA Processing
+            %% -----------------DOA Processing -----------------------------
             angleEst = datapath(DOAObj, CFAR_detection_results_rank, Txbeam_angle, DopplerFFTOut);
             
             maxRangeShow = CFAR_DetectionObj.rangeBinSize * rangeFFTObj.rangeFFTSize;
@@ -315,7 +314,7 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                             angles_all_points(iobj,4)=out_frame(iobj).rangeInd;
                             angles_all_points(iobj,5)=out_frame(iobj).doppler_corr;
                             angles_all_points(iobj,6)=out_frame(iobj).range;
-                            %switch left and right, the azimuth angle is flipped
+                            %switch left and right, the azimuth angle is not flipped
                             xyz(iobj,1) = angles_all_points(iobj,6) * sind( angles_all_points(iobj,1) * -1 ) * cosd( angles_all_points(iobj,2) );
                             xyz(iobj,2) = angles_all_points(iobj,6) * cosd( angles_all_points(iobj,1) * -1 ) * cosd( angles_all_points(iobj,2) );
                             %switch upside and down, the elevation angle is flipped
