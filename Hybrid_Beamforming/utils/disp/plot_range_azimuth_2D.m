@@ -65,7 +65,7 @@ function  [mag_data_static, mag_data_dynamic, y_axis, x_axis] = plot_range_azimu
 
 dopplerFFTSize = size(radar_data_pre_3dfft,2);
 rangeFFTSize = size(radar_data_pre_3dfft,1);
-angleFFTSize = 256;
+angleFFTSize = 128;
 % ratio used to decide engergy threshold used to pick non-zero Doppler bins
 ratio = 0.5;
 DopplerCorrection = 0;

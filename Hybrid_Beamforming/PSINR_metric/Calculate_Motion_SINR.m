@@ -16,17 +16,29 @@ end
 gAngle = mean(phaseAngle(:, :), 2);
 gAngle_diff = diff(gAngle);
 
+% 高通滤波去直流
+gAngle_diff = filter(ellip_HPF, gAngle_diff);
+
+% FFT
 nFFTSize = 1024;
 gAngle_diff_fft = abs(fftshift(fft(gAngle_diff, nFFTSize)));
+
+% 频域直接去直流
+gAngle_diff_fft(length(gAngle_diff_fft)/2+1) = 0;
+
 gAngle_diff_fft_half = gAngle_diff_fft(nFFTSize/2+1:end);
 gAngle_diff_fft_norm_half = gAngle_diff_fft_half / (nFFTSize/2);
 
 if 0
-    figure(155)
-    plot(fftshift(abs(gAngle_diff_fft)))
+    figure(154)
+    plot(gAngle_diff_fft)
     pause(0.01)
 
-    figure(156)
+    figure(158)
+    plot(gAngle_diff_fft - mean(gAngle_diff_fft))
+    pause(0.01)
+
+    figure(159)
     plot(gAngle_diff_fft_norm_half)
     pause(0.01)
 end

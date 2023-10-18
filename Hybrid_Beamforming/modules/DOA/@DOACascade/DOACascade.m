@@ -94,7 +94,7 @@ classdef DOACascade < Module
         end
                 
         %% datapath function
-        function out = datapath(obj, detected_obj, Txbeam_angle, DopplerFFTIn)
+        function out = datapath(obj, detected_obj, TxBF_Angle, RxBF_Angle, DopplerFFTIn)
             numObj = length(detected_obj);
             out = detected_obj;
             numAoAObjCnt = 0;
@@ -163,7 +163,7 @@ classdef DOACascade < Module
                     
                     case 3
                         % Rx beamforming, angle estimated after 2D FFT
-                        [DOA_angles, angle_sepc_2D_fft, range_beam_angle]= DOA_beamformingFFT_2D_RXBF(obj, X, current_obj, Txbeam_angle, DopplerFFTIn);
+                        [DOA_angles, angle_sepc_2D_fft, range_beam_angle]= DOA_beamformingFFT_2D_RXBF(obj, X, current_obj, TxBF_Angle, RxBF_Angle, DopplerFFTIn);
                         if (numAoAObjCnt == 0)
                             out = [];
                         end
@@ -188,7 +188,7 @@ classdef DOACascade < Module
                             out(numAoAObjCnt).range_beam_spectrum = range_beam_angle;
                             out(numAoAObjCnt).angle_estSNR = out(numAoAObjCnt).angles(5);
 
-                            %out(numAoAObjCnt).estSNR = current_obj.estSNR + out(numAoAObjCnt).angles(5);
+                            out(numAoAObjCnt).estSNR = current_obj.estSNR + out(numAoAObjCnt).angles(5);
                         end
 
 

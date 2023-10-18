@@ -100,7 +100,7 @@ if (obj.detectMethod == 1) % Cell dual-pass CASO-CFAR
             detection_results(i_obj).doppler_corr = detection_results(i_obj).doppler; % sig_integrate(detection_results(i_obj).rangeInd, detection_results(i_obj).dopplerInd); %detection_results(i_obj).doppler;
             detection_results(i_obj).noise_var = noise_obj_agg(i_obj);       %noise variance
             detection_results(i_obj).bin_val  = reshape(input(xind, Ind_obj(i_obj,2),:), obj.numAntenna, 1);  %2d FFT value for the 4 antennas
-            detection_results(i_obj).estSNR   = 10*log10(sum(abs(detection_results (i_obj).bin_val).^2)/sum(detection_results (i_obj).noise_var));  %2d FFT value for the 4 antennas
+            detection_results(i_obj).estSNR   = 10*log10(sum(abs(detection_results (i_obj).bin_val).^2)/sum(detection_results(i_obj).noise_var));  %2d FFT value for the 4 antennas
             %detection_results(i_obj).estSNR  =         (sum(abs(detection_results (i_obj).bin_val).^2)/sum(detection_results (i_obj).noise_var));  
             
             sig_bin = [];

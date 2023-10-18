@@ -16,7 +16,7 @@
 %   angleObj_est: angle estimation results
 %   angle_sepc_2D_fft: angle 2D fft spectrum
 
-function [angleObj_est, angle_sepc_2D_fft, range_beam_angle]= DOA_beamformingFFT_2D_RXBF(obj, sig, current_obj, Txbeam_angle, DopplerFFTIn)
+function [angleObj_est, angle_sepc_2D_fft, range_beam_angle]= DOA_beamformingFFT_2D_RXBF(obj, sig, current_obj, TxBF_Angle, RxBF_Angle, DopplerFFTIn)
 
 range_beam_angle = [];
 
@@ -50,7 +50,7 @@ if 1
     end
     % dynamic
     angle_range_dynamic = squeeze(sum(DopplerFFTIn(:, indSel, :), 2) );
-    wx = sind(Txbeam_angle);
+    wx = sind(RxBF_Angle);
     a1_az = exp(1j*2*pi*d*(D_BF*wx));
     
     for irange = 1:size(angle_range_dynamic,1)
@@ -87,7 +87,7 @@ for i_line = 1:apertureLen_elev
     sig_2D(D_sel(indU), i_line) = sig_sel(indU);
     
     % RxBF
-    wx = sind(Txbeam_angle);
+    wx = sind(RxBF_Angle);
     a1_az = exp(-1j*2*pi*f0*d*(D_BF*wx)); 
     sig_2D_RxBF(D_sel(indU), i_line) = sig_sel(indU) .* a1_az;  
       

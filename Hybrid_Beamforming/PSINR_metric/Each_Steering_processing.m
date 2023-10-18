@@ -4,7 +4,7 @@
 % gRangeDoppler_Profile:
 
 
-function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_processing(dataFolderName, Txbeam_angle, UsedFrames, LOG_ON, PLOT_ON)
+function [gframe_obj] = Each_Steering_processing(dataFolderName, TxBF_Angle, RxBF_Angle, UsedFrames, LOG_ON, PLOT_ON)
     %tic
 
     dataPlatform = 'TDA2';
@@ -15,17 +15,14 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
     module_param_file = [input_path, 'module_param.m']; 
     
     gframe_obj = {};    
-    gRange_Profile = [];
-    gRangeDoppler_Profile = [];
+
 
     % 判断文件夹是否存在
-
-
     [fileIdx_unique] = getUniqueFileIdx(dataFolderName);
         
     [fileNameStruct] = getBinFileNames_withIdx(dataFolderName, fileIdx_unique{1});
 
-    [numValidFrames, dataFileSize] = getValidNumFrames(fullfile(dataFolderName, fileNameStruct.masterIdxFile));
+    [numValidFrames, ~] = getValidNumFrames(fullfile(dataFolderName, fileNameStruct.masterIdxFile));
     if numValidFrames < UsedFrames
         UsedFrames = numValidFrames;
         disp(strcat("UsedFrames is Changed >>>>> ", num2str(UsedFrames)));  
@@ -144,66 +141,9 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
             end
 
             %% -----------------DOA Processing -----------------------------
-            angleEst = datapath(DOAObj, CFAR_detection_results_rank, Txbeam_angle, DopplerFFTOut);
+            angleEst = datapath(DOAObj, CFAR_detection_results_rank, TxBF_Angle, RxBF_Angle, DopplerFFTOut);
             
             maxRangeShow = CFAR_DetectionObj.rangeBinSize * rangeFFTObj.rangeFFTSize;
-            
-            % Visualization
-            if PLOT_ON
-                figure(103);
-                set(gcf,'units','normalized','outerposition',[0.05 0.3 0.6 0.6])                
-                
-                subplot(2,3,1)               
-                plot((1:size(RD_Sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, RD_Sig_integrate(:,size(RD_Sig_integrate,2)/2+1),'g','LineWidth',4);
-                hold on; grid on;
-                for ii=1:size(RD_Sig_integrate,2)
-                    plot((1:size(RD_Sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, RD_Sig_integrate(:, ii));
-                    hold on; grid on;
-                    if ~isempty(CFAR_detection_results)
-                        ind = find(detect_all_points(:,2) == ii);
-                        if (~isempty(ind))
-
-
-                            rangeInd = detect_all_points(ind,1);
-                            plot(rangeInd*CFAR_DetectionObj.rangeBinSize, RD_Sig_integrate(rangeInd, ii), ...
-                                    'o','LineWidth',2,...
-                                    'MarkerEdgeColor','k',...
-                                    'MarkerFaceColor',[.49 1 .63],...
-                                    'MarkerSize',10);
-                        end
-                    end
-                end
-                
-                xlabel('Range(m)');
-                ylabel('Receive Power (dB)')
-                title({'Range Profile(zero Doppler - thick green line):',' valid obj frameId ' num2str(valid_obj_frameId)});
-                hold off;
-
-                subplot(2,3,2);
-                %subplot_tight(2,2,2,0.1)
-                RD_Sig_integrate_noDC = RD_Sig_integrate(:, [1:size(RD_Sig_integrate,2)/2-1 size(RD_Sig_integrate,2)/2+3:end]);
-                [Y, X]=meshgrid(1:1:size(RD_Sig_integrate_noDC,1), -size(RD_Sig_integrate_noDC,2)/2+1:1:size(RD_Sig_integrate_noDC,2)/2);
-                Y = Y * CFAR_DetectionObj.rangeBinSize;
-                X = X * CFAR_DetectionObj.velocityBinSize;
-                fig2 = pcolor(X,Y, RD_Sig_integrate_noDC');
-                fig2.FaceColor = 'interp';
-                fig2.LineStyle="none";
-                colormap(gca,"jet");
-                c = colorbar;
-                c.Label.String = 'Relative Power(dB)';
-               
-                ylim([1 maxRangeShow/2])
-
-                [RD_SNR_max_val, RD_SNR_max_idx]= max(detect_all_points(:, 4));
-                title({' Range/Velocity Plot No-DC', ...
-                        strcat('obj1 SNR=', num2str(CFAR_detection_results(1).estSNR)) ...
-                        strcat(['SNR_{max}(dB)' num2str(RD_SNR_max_val) ...
-                                ' Range(m)=' num2str(detect_all_points(RD_SNR_max_idx, 1)*CFAR_DetectionObj.rangeBinSize)] )  ...
-                        });
-                pause(0.01)
-
-            end % PLOT_ON
-
 
             if ~isempty(angleEst)
                 %% Filting using the doppler, estSNR, and Range angle fft
@@ -305,7 +245,61 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                 gframe_obj_estAngle(valid_obj_frameId, :, 1:length(obj_rangebin)) = [detection_results_all_frames{valid_obj_frameId}.angles];
                 gframe_obj_RA_Spectrum(valid_obj_frameId, :)  = detection_results_all_frames{valid_obj_frameId}.range_beam_spectrum;
                 
-                if PLOT_ON 
+                            
+                % Visualization
+                if (PLOT_ON && (~mod(frameId,5)))
+                    fig103=figure(103);
+                    set(gcf,'units','normalized','outerposition',[0.05 0.3 0.6 0.6])                
+                    
+                    subplot(2,3,1)               
+                    plot((1:size(RD_Sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, RD_Sig_integrate(:,size(RD_Sig_integrate,2)/2+1),'g','LineWidth',4);
+                    hold on; grid on;
+                    for ii=1:size(RD_Sig_integrate,2)
+                        plot((1:size(RD_Sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, RD_Sig_integrate(:, ii));
+                        hold on; grid on;
+                        if ~isempty(CFAR_detection_results)
+                            ind = find(detect_all_points(:,2) == ii);
+                            if (~isempty(ind))
+
+
+                                rangeInd = detect_all_points(ind,1);
+                                plot(rangeInd*CFAR_DetectionObj.rangeBinSize, RD_Sig_integrate(rangeInd, ii), ...
+                                        'o','LineWidth',2,...
+                                        'MarkerEdgeColor','k',...
+                                        'MarkerFaceColor',[.49 1 .63],...
+                                        'MarkerSize',10);
+                            end
+                        end
+                    end
+                    
+                    xlabel('Range(m)');
+                    ylabel('Receive Power (dB)')
+                    title({'Range Profile(zero Doppler - thick green line):',' valid obj frameId ' num2str(valid_obj_frameId)});
+                    hold off;
+
+                    subplot(2,3,2);
+                    %subplot_tight(2,2,2,0.1)
+                    RD_Sig_integrate_noDC = RD_Sig_integrate(:, [1:size(RD_Sig_integrate,2)/2-1 size(RD_Sig_integrate,2)/2+3:end]);
+                    [Y, X]=meshgrid(1:1:size(RD_Sig_integrate_noDC,1), -size(RD_Sig_integrate_noDC,2)/2+1:1:size(RD_Sig_integrate_noDC,2)/2);
+                    Y = Y * CFAR_DetectionObj.rangeBinSize;
+                    X = X * CFAR_DetectionObj.velocityBinSize;
+                    fig2 = pcolor(X,Y, RD_Sig_integrate_noDC');
+                    fig2.FaceColor = 'interp';
+                    fig2.LineStyle="none";
+                    colormap(gca,"jet");
+                    c = colorbar;
+                    c.Label.String = 'Relative Power(dB)';
+                
+                    ylim([1 maxRangeShow/2])
+
+                    [RD_SNR_max_val, RD_SNR_max_idx]= max(detect_all_points(:, 4));
+                    title({' Range/Velocity Plot No-DC', ...
+                            strcat('obj1 SNR=', num2str(CFAR_detection_results(1).estSNR)) ...
+                            strcat(['SNR_{max}(dB)' num2str(RD_SNR_max_val) ...
+                                    ' Range(m)=' num2str(detect_all_points(RD_SNR_max_idx, 1)*CFAR_DetectionObj.rangeBinSize)] )  ...
+                            });
+                    pause(0.01)
+ 
                     % plot 3D point cloud
                     if length(out_frame) > 0
                         for iobj = 1:length(out_frame)
@@ -365,7 +359,7 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                             PLOT_ON_RA = 1;
                             STATIC_ONLY = 1; 
                             minRangeBinKeep = 1;
-                            rightRangeBinDiscard = 20;
+                            rightRangeBinDiscard = 1;
                             [mag_data_static(:,:,valid_obj_frameId), ...
                             mag_data_dynamic(:,:,valid_obj_frameId), ...
                             y_axis, x_axis] = plot_range_azimuth_2D(CFAR_DetectionObj.rangeBinSize, ...
@@ -399,7 +393,7 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
                                 view(2);    
                                 xlabel('meters');    
                                 ylabel('meters');
-                                title({'Dynamic HeatMap', strcat('curent Sweep angle= ',num2str(Txbeam_angle))});
+                                title({'Dynamic HeatMap', strcat('curent Sweep angle= ',num2str(TxBF_Angle))});
                             end
                             
                             pause(0.1) 
@@ -408,20 +402,66 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
             
                     end % if length(angleEst) > 0
                     
+                    if ~mod(frameId,5)
+                        % save Fig
+                        temp = split(dataFolderName, '\');
+                        angleName = temp(end-1);
+                        temp(end)=[];
+                        temp(end)=[];
+                        tempStr = temp(1);
+                        for iTemp = 2:length(temp)
+                            tempStr = strcat(tempStr,'\', temp(iTemp));
+                        end
+                        tempStr = cell2mat(tempStr);
+                        png_floder = strcat(tempStr, '_png\');
+                        if ~exist(png_floder,'dir')
+                            mkdir(png_floder)
+                        end
+                        p_file = strcat([png_floder, cell2mat(angleName), '_frame_',num2str(frameId), '.png']);
+                        saveas(fig103, p_file, 'png');
+                        %p_filefig = strcat([png_floder, cell2mat(angleName), '_frame_',num2str(frameId), '.fig']);
+                        %saveas(fig103, p_filefig, 'fig');
+                    end
+                    
+                    if LOG_ON
+                        disp({strcat("Processing frameId >>>>> ", num2str(frameId)), ...
+                            strcat("Processing valid_obj_frameId >>>>> ", num2str(valid_obj_frameId))});  
+                    end
                 end % PLOT_ON
-                            
-                if 0
-                    disp({strcat("Processing frameId >>>>> ", num2str(frameId)), ...
-                          strcat("Processing valid_obj_frameId >>>>> ", num2str(valid_obj_frameId))});  
-                end
+                
+                % return data
+                gframe_obj{valid_obj_frameId}.rangeBins                     = gframe_obj_rangeBins(valid_obj_frameId, 1:length(obj_rangebin));
+                gframe_obj{valid_obj_frameId}.estSNR                        = gframe_obj_estSNR(valid_obj_frameId, 1:length(obj_rangebin));
+                gframe_obj{valid_obj_frameId}.estAngle                      = gframe_obj_estAngle(valid_obj_frameId, :, 1:length(obj_rangebin));                    
+                gframe_obj{valid_obj_frameId}.RA_Spectrum                   = gframe_obj_RA_Spectrum(valid_obj_frameId,:);
+                gframe_obj{valid_obj_frameId}.rangeResolution               = genCalibrationMatrixObj.rangeResolution;
+                
+                gframe_obj{valid_obj_frameId}.Range_Profile                 = rangeFFTOut(:,:,:);
+                gframe_obj{valid_obj_frameId}.RangeDoppler_Profile          = DopplerFFTOut(:, [1:size(DopplerFFTOut,2)/2-1 size(DopplerFFTOut,2)/2+3:end], :);
+                
 
-                gRange_Profile(valid_obj_frameId,:,:,:)             = rangeFFTOut(:,:,:);
-                gRangeDoppler_Profile(valid_obj_frameId,:,:,:)      = DopplerFFTOut(:,:,:);
-        
-                gframe_obj{valid_obj_frameId}.rangeBins             = gframe_obj_rangeBins(valid_obj_frameId, 1:length(obj_rangebin));
-                gframe_obj{valid_obj_frameId}.estSNR                = gframe_obj_estSNR(valid_obj_frameId, 1:length(obj_rangebin));
-                gframe_obj{valid_obj_frameId}.estAngle              = gframe_obj_estAngle(valid_obj_frameId, :, 1:length(obj_rangebin));                    
-                gframe_obj{valid_obj_frameId}.RA_Spectrum           = gframe_obj_RA_Spectrum(valid_obj_frameId,:);
+
+                PLOT_ON_RA = 0;
+                STATIC_ONLY = 0; 
+                minRangeBinKeep = 1;
+                rightRangeBinDiscard = 1;
+                [mag_data_static(:,:,valid_obj_frameId), ...
+                mag_data_dynamic(:,:,valid_obj_frameId), ...
+                y_axis, x_axis] = plot_range_azimuth_2D(CFAR_DetectionObj.rangeBinSize, ...
+                                                        DopplerFFTOut,...
+                                                        length(genCalibrationMatrixObj.TxForMIMOProcess), ...
+                                                        length(genCalibrationMatrixObj.RxForMIMOProcess), ...
+                                                        CFAR_DetectionObj.antenna_azimuthonly, ...
+                                                        LOG_ON, ...
+                                                        STATIC_ONLY, ...
+                                                        PLOT_ON_RA, ...
+                                                        minRangeBinKeep, ...
+                                                        rightRangeBinDiscard);
+                
+
+                gframe_obj{valid_obj_frameId}.RangeAngle_Dynamic_Profile    = mag_data_dynamic(:,:,valid_obj_frameId)';
+
+
 
             end % ~isempty(angleEst) 
 
@@ -430,7 +470,7 @@ function [gframe_obj, gRange_Profile, gRangeDoppler_Profile] = Each_Steering_pro
     end % frameId
 
 
-    toc
+    %toc
 
 
 
