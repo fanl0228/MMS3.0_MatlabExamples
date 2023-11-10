@@ -107,6 +107,21 @@ end
 radar_data_angle_range_dynamic = squeeze(sum(abs(radar_data_angle_range(:,indSel,:)),2));
 radar_data_angle_range_Static = squeeze(sum(abs(radar_data_angle_range(:,dopplerFFTSize/2+1,:)),2));
 
+if 0
+    State_RDA = fftshift(radar_data_angle_range, 2);
+    State_RA_NoDopper = squeeze(mean(State_RDA, 2));
+    figure(1)
+    [y_axis, x_axis]=meshgrid(1: size(State_RA_NoDopper, 2), 1: size(State_RA_NoDopper, 1));
+    fig2=surf(y_axis, x_axis, 10*log10(abs(squeeze(State_RA_NoDopper(:, :)))));
+    fig2.FaceColor = 'interp';
+    fig2.LineStyle="none";
+    colormap(gca,"jet");
+    c = colorbar;
+    c.Label.String = 'Relative Power(dB)';
+    title("Range-Angle")
+    pause(0.05)
+end
+
 
 indices_1D = (minRangeBinKeep:n_range_fft_size-rightRangeBinDiscard);
 max_range = (n_range_fft_size-1)*range_resolution;

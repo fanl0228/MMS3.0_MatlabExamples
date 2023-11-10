@@ -247,7 +247,7 @@ function [gframe_obj] = Each_Steering_processing(dataFolderName, TxBF_Angle, RxB
                 
                             
                 % Visualization
-                if (PLOT_ON && (~mod(frameId,5)))
+                if (PLOT_ON && (~mod(frameId, 1)))
                     fig103=figure(103);
                     set(gcf,'units','normalized','outerposition',[0.05 0.3 0.6 0.6])                
                     
@@ -290,7 +290,7 @@ function [gframe_obj] = Each_Steering_processing(dataFolderName, TxBF_Angle, RxB
                     c = colorbar;
                     c.Label.String = 'Relative Power(dB)';
                 
-                    ylim([1 maxRangeShow/2])
+                    ylim([1 maxRangeShow/3])
 
                     [RD_SNR_max_val, RD_SNR_max_idx]= max(detect_all_points(:, 4));
                     title({' Range/Velocity Plot No-DC', ...
@@ -378,8 +378,8 @@ function [gframe_obj] = Each_Steering_processing(dataFolderName, TxBF_Angle, RxB
                                 subplot(2,3,4);
                                 surf(y_axis, x_axis, (mag_data_static(:,:,valid_obj_frameId)).^0.4,'EdgeColor','none');
                                 colormap(gca,"jet");
-                                xlim([-10 10])
-                                ylim([1 maxRangeShow/2])
+                                xlim([-7 7])
+                                ylim([1 maxRangeShow/3])
                                 view(2);
                                 xlabel('meters');    
                                 ylabel('meters');
@@ -388,8 +388,8 @@ function [gframe_obj] = Each_Steering_processing(dataFolderName, TxBF_Angle, RxB
                                 subplot(2,3,5);
                                 surf(y_axis, x_axis, (mag_data_dynamic(:,:,valid_obj_frameId)).^0.4,'EdgeColor','none');
                                 colormap(gca,"jet");
-                                xlim([-10 10])
-                                ylim([1 maxRangeShow/2])
+                                xlim([-7 7])
+                                ylim([1 maxRangeShow/3])
                                 view(2);    
                                 xlabel('meters');    
                                 ylabel('meters');
@@ -402,7 +402,7 @@ function [gframe_obj] = Each_Steering_processing(dataFolderName, TxBF_Angle, RxB
             
                     end % if length(angleEst) > 0
                     
-                    if ~mod(frameId,5)
+                    if ~mod(frameId,1)
                         % save Fig
                         temp = split(dataFolderName, '\');
                         angleName = temp(end-1);
@@ -419,8 +419,8 @@ function [gframe_obj] = Each_Steering_processing(dataFolderName, TxBF_Angle, RxB
                         end
                         p_file = strcat([png_floder, cell2mat(angleName), '_frame_',num2str(frameId), '.png']);
                         saveas(fig103, p_file, 'png');
-                        %p_filefig = strcat([png_floder, cell2mat(angleName), '_frame_',num2str(frameId), '.fig']);
-                        %saveas(fig103, p_filefig, 'fig');
+                        p_filefig = strcat([png_floder, cell2mat(angleName), '_frame_',num2str(frameId), '.fig']);
+                        saveas(fig103, p_filefig, 'fig');
                     end
                     
                     if LOG_ON

@@ -184,7 +184,7 @@ classdef DOACascade < Module
                             
 
                             out(numAoAObjCnt).angles = DOA_angles(:,ii_obj);
-                            out(numAoAObjCnt).spectrum = angle_sepc_2D_fft;
+                            out(numAoAObjCnt).spectrum = angle_sepc_2D_fft;   % 对于二维角度才有效，即方位角 和俯仰角 同时使用的情况
                             out(numAoAObjCnt).range_beam_spectrum = range_beam_angle;
                             out(numAoAObjCnt).angle_estSNR = out(numAoAObjCnt).angles(5);
 

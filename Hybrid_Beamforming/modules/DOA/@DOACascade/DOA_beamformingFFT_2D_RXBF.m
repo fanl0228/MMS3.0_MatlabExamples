@@ -59,7 +59,7 @@ if 1
     end
     % CFAR Detection
     [N_obj, Ind_obj, noise_obj, CFAR_SNR] = CFAR_SO(10*log10(abs(range_beam_angle).^2), 10, 5, 1.2, 0);
-    if 0
+    if 1
         figure(333)
         plot(10*log10(abs(range_beam_angle).^2))
         hold on;
@@ -71,8 +71,7 @@ if 1
 end
 
 %%
-%FFT based implementation
-%first form a 2D matrix based on the antenna coordinates
+%FFT based implementation, first form a 2D matrix based on the antenna coordinates
 D = obj.D;
 D = D + 1;
 apertureLen_azim = max(D(:,1));
@@ -91,28 +90,46 @@ for i_line = 1:apertureLen_elev
     a1_az = exp(-1j*2*pi*f0*d*(D_BF*wx)); 
     sig_2D_RxBF(D_sel(indU), i_line) = sig_sel(indU) .* a1_az;  
       
+end 
+
+if 0
+    RxBF_Angle = 13;
+    wx = sind(RxBF_Angle);
+    a1_az = exp(-1j*2*pi*f0*d*(D_BF*wx));
+    steervec = abs(fftshift(fft(a1_az, 180)))
+    figure(RxBF_Angle)
+    plot(steervec)
 end
-% 
+
+
+
 %%
 % run FFT on azimuth and elevation
-angle_sepc_1D_fft_RxBF = fftshift(fft(sig_2D_RxBF, angleFFTSize,1),1); 
-angle_sepc_1D_fft_RxBF = flipud(angle_sepc_1D_fft_RxBF);
-% angle_sepc_1D_fft = angle_sepc_1D_fft_RxBF;
 % No RXBF
 angle_sepc_1D_fft = fftshift(fft(sig_2D, angleFFTSize,1),1); 
 angle_sepc_1D_fft = flipud(angle_sepc_1D_fft);
 
+% RxBF：不同的bf 角度会改变 angle-fft之后的峰值？
+angle_sepc_1D_fft_RxBF = fftshift(fft(sig_2D_RxBF, angleFFTSize,1),1); %
+angle_sepc_1D_fft_RxBF = flipud(angle_sepc_1D_fft_RxBF);
+
+% for two-dim
 angle_sepc_2D_fft=fftshift(fft(angle_sepc_1D_fft, angleFFTSize, 2),2);  % 
 
 if 0
-    figure(565)
-    plot(abs(angle_sepc_1D_fft),'b');
-    hold on;
-    plot(abs(angle_sepc_1D_fft_RxBF), 'r');
-    hold off;
+    figure(569)
+    subplot(121)
+    plot(10*log10(abs(angle_sepc_1D_fft)),'b');
+    xticks(0:5:121)
+    grid on;
+    title("angle FFT No RxBF")
+    subplot(122)
+    plot(10*log10(abs(angle_sepc_1D_fft_RxBF)), 'r');
+    xticks(0:5:121)
+    grid on;
+    title("angle FFT RxBF")
     pause(0.01)
 end
-
 
 wx_vec=[-pi:2*pi/angleFFTSize:pi];
 wz_vec=[-pi:2*pi/angleFFTSize:pi];
@@ -151,7 +168,7 @@ if apertureLen_elev ==1
     
 else
     %azimuth and elevation angle estimation
-   
+    
     % figure(1);plot(spec_azim); hold on; grid on
     % plot(peakLoc_azim, spec_azim(peakLoc_azim),'ro');hold on
     

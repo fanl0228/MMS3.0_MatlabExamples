@@ -139,13 +139,32 @@ end
 
 %% 可视化 差分信号
 if PLOT_ON
+      % All RX antennas are averaged and the calibrated data signal is plotted.
+    gAngle_tmp = mean(unwrap(angle(gPhase_RXs(:, :))), 2); 
+    gAngle_tmp_diff = diff(gAngle_tmp);
+    
+    % ---------------------Plot figure
+    fig8=figure(130);
+    %set(gcf,'units','normalized','outerposition', [0.7 0.6 0.3 0.4]);
+    subplot(121)
+    plot(gAngle_tmp,'color', 'blue');
+    title({"Phase", strcat("Target Bin",num2str(targetbin))});
+    subplot(122)
+    plot(gAngle_tmp_diff,'color', 'blue');
+    title({"No phase CAL Motion Signal", ...
+            strcat("Intensity\_estSINR (dB): ", num2str(Intensity_estSINR)),...
+            strcat("Phase\_estSINR (dB): ", num2str(Phase_estSINR))});
+    ylim([-1, 1]);
+    pause(0.01)
+
+
     % All RX antennas are averaged and the calibrated data signal is plotted.
     gAngle = mean(gCalib_Angle(:, :), 2);
     gAngle_diff = diff(gAngle);
     
     % ---------------------Plot figure
     fig9=figure(131);
-    set(gcf,'units','normalized','outerposition', [0.7 0.6 0.3 0.4]);
+    %set(gcf,'units','normalized','outerposition', [0.7 0.6 0.3 0.4]);
     subplot(121)
     plot(gAngle,'color', 'blue');
     title({"Phase", strcat("Target Bin",num2str(targetbin))});
