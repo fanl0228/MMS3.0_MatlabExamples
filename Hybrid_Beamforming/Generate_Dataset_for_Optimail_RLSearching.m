@@ -4,6 +4,8 @@
 % 采用二分查找的方式，搜索最优 TxBF 角度；
 % 这里要求 RxBF = TxBF
 
+% Range bin res = 0.2343
+
 tic
 clearvars
 close all
@@ -19,13 +21,13 @@ NumRx = 16;
 num_chirps = 252;
 Signal_FS = 2000;  % Doppler-Fs
 LOG_ON = 0;
-PLOT_ON = 0;
+PLOT_ON = 1;
 
-for LOSNUM = 20
+for LOSNUM = 2
     
-    dataFolder_Path = strcat(['H:\NLOS', num2str(LOSNUM), '\']); 
+    %dataFolder_Path = strcat(['H:\NLOS', num2str(LOSNUM), '\']); 
 
-    %dataFolder_Path = strcat(['I:\HyBF_Datasets\NLOS', num2str(LOSNUM), '\']); 
+    dataFolder_Path = strcat(['I:\HyBF_Datasets\NLOS', num2str(LOSNUM), '\']); 
   
 
     png_floder = strcat([dataFolder_Path(1:end-1), '_DRL\']);
@@ -34,10 +36,10 @@ for LOSNUM = 20
     end
     LogFileId = fopen(strcat(png_floder, 'LogFile.txt'), 'w');
     
-    if LOSNUM == 20
-        SNUM = 2; 
+    if LOSNUM == 10
+        SNUM = 3:4; 
     else
-        SNUM = 100;
+        SNUM = 0;
     end
 
     for SampleNum = SNUM
@@ -92,7 +94,7 @@ for LOSNUM = 20
                 end
             end
             
-            RxBF_Angle = 0; %TxBF_Angle;
+            RxBF_Angle = TxBF_Angle;
             [Intensity_estSINR, Phase_estSINR, gframe_obj]...
                     = Each_Steering_Calculate_pSINR(dataFolderName, ...
                                                     isStepAngle, ...
@@ -223,11 +225,12 @@ for LOSNUM = 20
             ra_spec = ra_spec/length(gframe_obj);
             ra_spec_log = 10*log10(ra_spec);
             range_angle_spec(:, step) = ra_spec_log;
+
+            % rangeResolution = gframe_obj{1}.rangeResolution;
+            
         else
             range_angle_spec(:, step) = zeros(1, 128); % range bin size = 128
         end
-    
-        rangeResolution = gframe_obj{1}.rangeResolution;
     
         step = step +1;
         
@@ -237,11 +240,11 @@ for LOSNUM = 20
         %% -----------------------PSINR
         fig225=figure();
         search_angle = -floor(length(Intensity_estSINR_all)/2):1:floor(length(Intensity_estSINR_all)/2);
-        %plot(search_angle, Intensity_estSINR_all, 'r')
-        % hold on;
+        plot(search_angle, Intensity_estSINR_all, 'r')
+        hold on;
         plot(search_angle, Phase_estSINR_all, 'b')
-        % hold on;
-        % plot(search_angle, est_PSINR_all, 'g')
+        hold on;
+        plot(search_angle, est_PSINR_all, 'g')
         hold off;
         % calculate the beamangle
         [val, idx] = max(est_PSINR_all);
@@ -264,7 +267,7 @@ for LOSNUM = 20
 
         fig226=figure();
         sizeMarker = 50;
-        colorMarker = linspace(1,10,length(Intensity_estSINR_all)); 
+        colorMarker = linspace(1,121,length(Intensity_estSINR_all)); 
         scatter(Intensity_estSINR_all, Phase_estSINR_all, sizeMarker, colorMarker, 'filled');
         hold on;
         Intensity_max = max(Intensity_estSINR_all);

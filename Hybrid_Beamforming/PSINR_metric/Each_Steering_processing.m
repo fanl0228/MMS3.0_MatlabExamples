@@ -247,9 +247,9 @@ function [gframe_obj] = Each_Steering_processing(dataFolderName, TxBF_Angle, RxB
                 
                             
                 % Visualization
-                if (PLOT_ON && (~mod(frameId, 1)))
+                if (PLOT_ON && (~mod(frameId, 5)))
                     fig103=figure(103);
-                    set(gcf,'units','normalized','outerposition',[0.05 0.3 0.6 0.6])                
+                    %set(gcf,'units','normalized','outerposition',[0.05 0.3 0.6 0.6])                
                     
                     subplot(2,3,1)               
                     plot((1:size(RD_Sig_integrate,1))*CFAR_DetectionObj.rangeBinSize, RD_Sig_integrate(:,size(RD_Sig_integrate,2)/2+1),'g','LineWidth',4);

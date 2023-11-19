@@ -58,9 +58,14 @@ if 1
         range_beam_angle(irange) = a1_az'*(RX_data'*RX_data)*a1_az;
     end
     % CFAR Detection
-    [N_obj, Ind_obj, noise_obj, CFAR_SNR] = CFAR_SO(10*log10(abs(range_beam_angle).^2), 10, 5, 1.2, 0);
-    if 1
+    [N_obj, Ind_obj, noise_obj, CFAR_SNR] = CFAR_SO(10*log10(abs(range_beam_angle).^2), 8, 4, 1.11, 0);
+    
+    if 0
         figure(333)
+        subplot(121)
+        plot(abs(range_beam_angle))
+        title("range beam angle after RxBF")
+        subplot(122)
         plot(10*log10(abs(range_beam_angle).^2))
         hold on;
         scatter(Ind_obj, noise_obj)
@@ -92,6 +97,7 @@ for i_line = 1:apertureLen_elev
       
 end 
 
+% test the effect of different rxbf angle
 if 0
     RxBF_Angle = 13;
     wx = sind(RxBF_Angle);
@@ -100,8 +106,6 @@ if 0
     figure(RxBF_Angle)
     plot(steervec)
 end
-
-
 
 %%
 % run FFT on azimuth and elevation
@@ -140,7 +144,15 @@ wz_vec = wz_vec(1:end-1);
 spec_azim = abs(angle_sepc_1D_fft_RxBF(:,1));
 obj.sidelobeLevel_dB = obj.sidelobeLevel_dB_azim;
 
-[peakVal_azim, peakLoc_azim] = DOA_BF_PeakDet_loc(obj, spec_azim);
+if 1
+    % use RxBF to estimate the angle, and cfar detection  
+    peakLoc_azim = Ind_obj;
+    peakVal_azim = noise_obj;
+else
+    % 
+    [peakVal_azim, peakLoc_azim] = DOA_BF_PeakDet_loc(obj, spec_azim);
+end
+
 
 if apertureLen_elev ==1
     %azimuth array only, no elevation antennas
@@ -157,7 +169,11 @@ if apertureLen_elev ==1
             angleObj_est(4, obj_cnt) = 0;
 
             locs = setdiff(1:length(spec_azim), ind);
-            angleObj_est(5, obj_cnt) = 10*log10((peakVal_azim(i_obj).^2)./mean(spec_azim(locs)));
+            if 1
+                angleObj_est(5, obj_cnt) = peakVal_azim(i_obj)./(10*log10(mean(spec_azim(locs)).^2));
+            else
+                angleObj_est(5, obj_cnt) = 10*log10((peakVal_azim(i_obj).^2)./mean(spec_azim(locs)));
+            end
 
             obj_cnt = obj_cnt+1;
             
